@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vantage": {
+      "command": "cargo",
+      "args": ["run", "--bin", "vantage_mcp"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}
