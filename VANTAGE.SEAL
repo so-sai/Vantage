@@ -1,0 +1,53 @@
+---
+# VANTAGE FORENSIC SEAL v1.0 - HUMILITY VERSION: 1.2.3
+status: "IN-DEVELOPMENT"
+confidence: "Geometric-Only"
+version: "1.2.3-alpha"
+timestamp: "2026-01-22T21:30:00Z"
+
+# PHẠM VI GIÁM SÁT (MONITORING SCOPE)
+scope:
+  - ast_structure
+  - syntactic_boundaries
+  - geometric_hashing
+  - epistemic_tag_regions
+
+# GIỚI HẠN (LIMITATIONS) - RẤT QUAN TRỌNG
+limitations:
+  semantic_changes: "Không phát hiện thay đổi ngữ nghĩa"
+  business_logic: "Không kiểm tra logic kinh doanh"
+  security_vulnerabilities: "Không quét lỗ hổng bảo mật"
+  cross_file_dependencies: "Không theo dõi phụ thuộc xuyên file"
+  runtime_behavior: "Không giám sát hành vi runtime"
+  comment_injection: "Không thấy vulnerabilities trong comments"
+
+# TỰA ĐỘ TIN CẬY (CONFIDENCE AXIS)
+confidence_statement: >
+  This seal asserts structural integrity only.
+  Vantage monitors if marked code regions have been altered.
+  It does NOT validate if the changes are correct or safe.
+
+# CAM KẾT KỸ THUẬT
+technical_commitments:
+  - "SHA-256 byte-range deterministic hashing"
+  - "Tree-sitter AST parsing"
+  - "Stateless execution"
+  - "Memory-safe operations"
+
+# TRÁCH NHIỆM CON NGƯỜI
+human_responsibility: >
+  Mọi signal 🟢 từ Vantage chỉ có nghĩa: "Cấu trúc AST không bị thay đổi".
+  Người phát triển vẫn BẮT BUỘC phải:
+  1. Kiểm tra semantic changes
+  2. Review business logic
+  3. Validate security implications
+  4. Test cross-file dependencies
+
+---
+
+[VANTAGE-MONITORED 🟡 RC 1.0]
+"AST structure monitored. Human wisdom required."
+
+---
+
+*Seal này tuân thủ Hiến pháp Khiêm tốn - công cụ phải nói rõ giới hạn của mình.*

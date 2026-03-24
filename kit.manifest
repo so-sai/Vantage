@@ -1,0 +1,19 @@
+# kit.manifest (Vantage v1.2.3)
+
+plugin:
+  id: vantage
+  version: 1.2.3
+  role: structural-sensor
+  description: "High-precision structural sensor for code integrity."
+
+capabilities:
+  - scan: "AST-based analysis (Rust, Python)"
+  - verify: "Drift detection via deterministic hashing"
+
+interface:
+  cli: "vantage-verify"
+  signals: "specs/signal_schema.md"
+
+constraints:
+  - no-background: true
+  - no-network: true

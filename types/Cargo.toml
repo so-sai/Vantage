@@ -1,0 +1,16 @@
+[package]
+name = "vantage-types"
+version = "1.2.3"
+edition = "2024"
+description = "Authority Contracts and Shared Types for Vantage - Cognitive Intent Protocol and Constitutional Framework"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/anomalyco/opencode"
+homepage = "https://opencode.ai"
+keywords = ["types", "authority", "cognitive", "protocol", "constitution"]
+categories = ["data-structures", "development-tools"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"

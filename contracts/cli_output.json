@@ -1,0 +1,26 @@
+{
+  "version": "1.2.3",
+  "codename": "Structural Abstraction",
+  "generated_at": "2026-03-24T17:15:00Z",
+  "signals": [
+    {
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "symbol_id": "examples::rust::simple::solve",
+      "parent": null,
+      "symbol_kind": "function",
+      "language": "rust",
+      "structural_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "normalized_hash": "sha256:87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7",
+      "signature": "fn solve(input: u32) -> u32",
+      "metadata": {
+        "is_pure": "true",
+        "has_unsafe": "false"
+      },
+      "origin": {
+        "parser": "vantage-core",
+        "version": "1.2.3"
+      },
+      "confidence": 1.0
+    }
+  ]
+}

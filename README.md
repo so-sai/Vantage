@@ -1,39 +1,25 @@
-# VANTAGE: Spatial AI Orchestration Protocol
+# Vantage v1.2.3 🛡️
 
-VANTAGE is a Rust-based ecosystem for managing, auditing, and visualizing AI Agent Swarms. It provides a spatial "Head-Up Display" (HUD) for developers to orchestrate complex AI tasks without losing context.
+**Vantage** is a high-precision **Structural Code Sensor** designed for the `kit` ecosystem. It detects and prevents structural drift in codebase evolution by enforcing deterministic physical and semantic hashes.
 
-## 🏗 Project Structure
+## 🚀 Key Features
+- **AST-Based Fingerprinting**: Language-specific parsing (Rust, Python) for deep structural analysis.
+- **Epistemic Anchors**: Link code blocks to immutable identity via `@epistemic:<uuid>` tags.
+- **Zero Silent Failure**: Guaranteed detection of structural changes, even if logic appears similar.
+- **Sealed & Stateless**: Single-shot CLI for deterministic CI/CD and Agentic workflows.
 
-This project is organized as a Rust Workspace:
+## 🛠️ Usage
 
-*   **`vantage-core`** (✅ Stable): The brain. Contains `AgentSwarm` logic, task delegation, and drift detection.
-*   **`vantage-mcp`** (✅ Universal): The bridge connecting Vantage to any IDE via Model Context Protocol.
-*   **`vantage-view`** (✅ Tested): The frontend renderer for the Spatial HUD.
+### Verify a file
+```bash
+./vantage-verify path/to/file.rs --json
+```
 
-## 🚀 Setup & Usage (Antigravity / Claude Code)
+### Response (Contract)
+Vantage outputs a `StructuralSignal` following the schema defined in `specs/signal_schema.md`.
 
-1. **Build the Binary**:
-   ```bash
-   cargo build --release -p vantage-mcp
-   ```
-2. **Connect to IDE**:
-   - Path: `E:\RESEARCH\Vantage\target\release\vantage-mcp.exe`
-   - Config: See `vantage-mcp.json` for manual settings.
-
-3. **Zero-Config Workflow**:
-   VANTAGE automatically identifies your project root. Just call tools with relative paths!
-
-## 🛠 Core Tools
-*   `check_core_status`: Diagnostic & workspace context.
-*   `spawn_agent`: Recruit specialized AI agents.
-*   `document_lens`: Deep-scan Excel, Word, and Markdown.
-*   `check_drift`: Audit code against your design blueprint.
-
-## 🛡 Safe Rust 2026
-Built with **TDD-First** methodology and strictly adhering to **Safe Rust** standards:
-- Zero `unsafe` blocks
-- No `.unwrap()` or `.expect()` in production code
-- Comprehensive error handling via `thiserror`
+## 📦 Integration
+Vantage is a first-class plugin for the [kit](https://github.com/anomalyco/kit) ecosystem.
 
 ---
-*VANTAGE - Orchestrating Intelligence in Space.*
+*Vantage: Because code drift is the enemy of truth.*

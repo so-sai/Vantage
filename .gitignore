@@ -4,3 +4,10 @@
 *.tmp
 *.bak
 .DS_Store
+
+# .kit Runtime State
+.kit/brain.db
+.kit/cache/
+.kit/*.log
+.kit/brain.db-*
+.kit/brain.db.bak
