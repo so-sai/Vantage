@@ -6,12 +6,15 @@ use vantage_core::*;
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut use_json = false;
+    let mut use_debug = false;
 
     // Very basic arg parsing for v1.2.3
     let mut file_path = None;
     for arg in args.iter().skip(1) {
         if arg == "--json" {
             use_json = true;
+        } else if arg == "--debug" {
+            use_debug = true;
         } else if file_path.is_none() {
             file_path = Some(arg);
         }
@@ -71,6 +74,19 @@ fn main() {
 
     let signals = parser.parse_signals(&content, file_path);
 
+    if use_debug {
+        println!("🔧 DEBUG: AST Tree for {}", file_path);
+        let mut p = tree_sitter::Parser::new();
+        let lang_ts = match lang {
+            Language::Rust => tree_sitter_rust::LANGUAGE.into(),
+            Language::Python => tree_sitter_python::LANGUAGE.into(),
+        };
+        p.set_language(&lang_ts).unwrap();
+        let tree = p.parse(&content, None).unwrap();
+        print_tree(tree.root_node(), 0);
+        println!("--- End of Tree ---");
+    }
+
     if use_json {
         let reason = if signals.is_empty() {
              Some("no_anchor_found".to_string())
@@ -87,7 +103,7 @@ fn main() {
                     "name": s.symbol_id,
                     "type": format!("{:?}", s.symbol_kind).to_lowercase(),
                     "structural_hash": s.structural_hash,
-                    "normalized_hash": s.normalized_hash,
+                    "semantic_hash": s.semantic_hash,
                     "signature": s.signature,
                     "location": {
                         "file": file_path,
@@ -99,7 +115,7 @@ fn main() {
         });
         println!("{}", serde_json::to_string_pretty(&result).unwrap());
     } else {
-        println!("🛡️  VANTAGE STRUCTURAL VERIFY (v1.2.3)  🛡️");
+        println!("🛡️  VANTAGE STRUCTURAL VERIFY (v1.2.3-alpha)  🛡️");
         println!("📁 File: {}", file_path);
         
         if signals.is_empty() {
@@ -112,8 +128,21 @@ fn main() {
             println!("  {}. UUID: {}", i + 1, signal.uuid);
             println!("     Symbol: {} ({:?})", signal.symbol_id, signal.symbol_kind);
             println!("     Hash (S): {}", signal.structural_hash);
-            println!("     Hash (N): {}", signal.normalized_hash);
+            println!("     Hash (N): {}", signal.semantic_hash);
         }
         println!("📋 Verification complete. Status: OK");
+    }
+}
+
+fn print_tree(node: tree_sitter::Node, depth: usize) {
+    println!("{}{} [{}-{}] \"{}\"", 
+        "  ".repeat(depth), 
+        node.kind(), 
+        node.start_byte(), 
+        node.end_byte(),
+        node.kind()
+    );
+    for child in node.children(&mut node.walk()) {
+        print_tree(child, depth + 1);
     }
 }

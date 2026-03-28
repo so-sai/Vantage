@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use vantage_core::cognition::parser::EpistemicParser;
+use vantage_core::EpistemicParser;
 
 proptest! {
     #[test]
@@ -11,7 +11,7 @@ proptest! {
             junk
         );
 
-        let signals = parser.parse_signals(&source);
+        let signals = parser.parse_signals(&source, "fuzz_test.rs");
 
         if signals.is_empty() {
             panic!("Parser blinded by junk: {:?}", junk);

@@ -6,7 +6,7 @@ pub mod fingerprint;
 pub mod intent;
 pub mod parser;
 
-pub use vantage_types::signal::{StructuralSignal, Origin};
+pub use vantage_types::signal::{CognitiveSignal, Origin};
 pub use vantage_types::symbol::SymbolKind;
 pub use cognition::lens::{LensData, Block, BlockType};
 pub use cognition::enforcer::{enforce_claim, EnforcementDecision, ExecutionContext};
@@ -39,7 +39,7 @@ pub struct Metadata {
 pub struct DocumentData {
     pub text: String,
     pub segments: Vec<Block>,
-    pub signals: Vec<StructuralSignal>,
+    pub signals: Vec<CognitiveSignal>,
     pub metadata: Metadata,
 }
 

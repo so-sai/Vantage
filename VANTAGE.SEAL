@@ -1,11 +1,14 @@
----
-# VANTAGE FORENSIC SEAL v1.0 - HUMILITY VERSION: 1.2.3
-status: "IN-DEVELOPMENT"
-confidence: "Geometric-Only"
-version: "1.2.3-alpha"
-timestamp: "2026-01-22T21:30:00Z"
+# VANTAGE FORENSIC SEAL (Format v1.0) - HUMILITY
+
+# System Version: v1.2.3
+
+status: "STABLE"
+confidence: "Forensic-Stable"
+version: "1.2.3"
+timestamp: "2026-03-28T23:58:00Z"
 
 # PHẠM VI GIÁM SÁT (MONITORING SCOPE)
+
 scope:
   - ast_structure
   - syntactic_boundaries
@@ -13,6 +16,7 @@ scope:
   - epistemic_tag_regions
 
 # GIỚI HẠN (LIMITATIONS) - RẤT QUAN TRỌNG
+
 limitations:
   semantic_changes: "Không phát hiện thay đổi ngữ nghĩa"
   business_logic: "Không kiểm tra logic kinh doanh"
@@ -22,19 +26,29 @@ limitations:
   comment_injection: "Không thấy vulnerabilities trong comments"
 
 # TỰA ĐỘ TIN CẬY (CONFIDENCE AXIS)
+
 confidence_statement: >
   This seal asserts structural integrity only.
   Vantage monitors if marked code regions have been altered.
   It does NOT validate if the changes are correct or safe.
 
 # CAM KẾT KỸ THUẬT
+
 technical_commitments:
   - "SHA-256 byte-range deterministic hashing"
   - "Tree-sitter AST parsing"
   - "Stateless execution"
   - "Memory-safe operations"
 
+# ĐẶC TÍNH v1.2.3 (FORENSIC BASELINE)
+
+forensic_baseline:
+  - "Zero-Corruption Normalization (\n, \r preserved)"
+  - "Epistemic Recovery Layer (ERROR node resilience)"
+  - "Rust 2024 Syntax Compatibility"
+
 # TRÁCH NHIỆM CON NGƯỜI
+
 human_responsibility: >
   Mọi signal 🟢 từ Vantage chỉ có nghĩa: "Cấu trúc AST không bị thay đổi".
   Người phát triển vẫn BẮT BUỘC phải:
@@ -45,9 +59,11 @@ human_responsibility: >
 
 ---
 
-[VANTAGE-MONITORED 🟡 RC 1.0]
+[VANTAGE-MONITORED 🟢 STABLE]
 "AST structure monitored. Human wisdom required."
 
 ---
 
 *Seal này tuân thủ Hiến pháp Khiêm tốn - công cụ phải nói rõ giới hạn của mình.*
+
+"v1.2.3 marks the birth of a deterministic structural sensor."

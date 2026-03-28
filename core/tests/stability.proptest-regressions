@@ -4,4 +4,4 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc 71e069a0f728723ed7501f28a83e1a00e6b26700718919cb8e0fcaf6f7ff174a # shrinks to junk = "A"
+cc b13450ee0ac1a3534bb53456542339d818c2b9620b2828ec045e98d57f96ea51 # shrinks to junk = "\u{200b}//&\n"

@@ -2,7 +2,7 @@ pub mod signal;
 pub mod symbol;
 pub mod hash;
 
-pub use signal::{StructuralSignal, Origin};
+pub use signal::{CognitiveSignal, Origin};
 pub use symbol::{SymbolKind, SymbolDefinition};
 pub use hash::{HashAlgorithm, StructuralHash, SemanticHash};
 

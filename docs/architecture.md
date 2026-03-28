@@ -1,59 +1,79 @@
-# Vantage Architecture (v1.2.3)
+# Vantage Architecture: The Unified Cognitive Pipeline (v1.2.3)
 
-Vantage is a **Structural Sensor** designed to integrate as a specialized plugin for the `kit` cognition system. It provides high-precision structural signals (L2) derived from deterministic AST analysis.
-
----
-
-## 1. System Positioning: Vantage as a Sensor
-Vantage is not a standalone "brain" or "memory" layer. It is a passive sensor serving the `kit` platform.
-
-* **Host (kit)**: Owns the memory layer (`.kit/`), manages high-level logic, and orchestrates agents.
-* **Sensor (Vantage)**: Provides structural "eye" capabilities. Maps physical code (Geometry) to logical symbols (Abstraction).
+Vantage is a **Stateless Structural Abstraction Sensor** designed to provide deterministic "ground truth" for the `kit` cognitive host. It operates as the L2 (Structural) layer, converting physical source code into symbolic signals.
 
 ---
 
-## 2. Core Philosophy: Structural Abstraction
-Vantage operates on the principle that while logic changes, **Structure** remains the most stable anchor for cognitive memory.
+## 📡 1. The Unified Cognitive Pipeline
 
-1. **Geometry (L0)**: The physical location and byte range of code targets.
-2. **Structure (L1)**: The AST-normalized shape hash of a target.
-3. **Abstraction (L2)**: The Unified Symbol Signal (name, type, signature).
-
----
-
-## 3. Interaction Model: Intent-Driven
-All interactions with Vantage follow the **Request-Response** pattern. It never runs in the background.
+This diagram illustrates the flow from a physical file change to a cognitive memory update in `kit`.
 
 ```mermaid
 graph TD
-    User([User/Agent]) -->|CognitiveIntent| Host[kit Host]
-    Host -->|vantage verify| Core[Vantage Core]
-    Core -->|Parse AST| TS[Tree-Sitter]
-    TS -->|Raw Nodes| Core
-    Core -->|Normalize| Signal[Unified Signal]
-    Signal -->|Response| Host
-    Host -->|Cognitive Memory| KitMemory[(.kit/)]
+    subgraph "L0: Physical Layer (Storage)"
+        Raw["Source Code (.rs, .py, .toml)"]
+    end
+
+    subgraph "L1/L2: Sensory Layer (Vantage Sensor)"
+        Shim["vantage-shim.bat (IDE/Agent Interceptor)"]
+        Verify["vantage-verify.exe (Rust Engine)"]
+        Signal["StructuralSignal (JSON Contract)"]
+        
+        Raw --> Shim
+        Shim --> Verify
+        Verify -->|"Normalized AST"| Signal
+    end
+
+    subgraph "L3: Cognitive Layer (Kit Host)"
+        Kit["kit CLI (Orchestrator)"]
+        Brain[".kit/brain.db (Memory)"]
+        Drift["Drift Detector (L3 Logic)"]
+        
+        Signal --> Kit
+        Kit --> Drift
+        Drift -->|"Compare current vs. historical"| Brain
+    end
+
+    subgraph "🛡️ Agent Safety Layer (Constitutional Boundary)"
+        Policy["AGENTS.md (Rules)"]
+        Enforce["ALWAYS 'verify' before 'edit'"]
+        
+        Policy -.-> Shim
+        Policy -.-> Kit
+    end
 ```
 
 ---
 
-## 4. Logical Components
+## 🛡️ 2. The Agent Safety Layer
 
-### 4.1 Parser (The Lens)
-Responsible for language-specific extraction. Maps `tree-sitter-rust` or `tree-sitter-python` nodes to the **Unified Symbol Schema**.
-* Location: `core/src/parser/`
+The Agent Safety Layer is a set of **Non-Negotiable Invariants** enforced through the structural sensor:
 
-### 4.2 Cognition (The Signal)
-Defines the `CognitiveSignal` struct and handles architectural invariants.
-* Location: `core/src/cognition/`
-
-### 4.3 Fingerprint (The Hash)
-Implements deterministic hashing strategies (Structural vs Semantic) to ensure forensic integrity.
-* Location: `core/src/fingerprint/`
+1.  **Lazy Hydration**: Agents are forbidden from reading raw file contents by default. They must first call `vantage verify` to see the "Abstraction".
+2.  **Structural Guard**: Files with `@epistemic` markers are "Locked". Any `structural_hash` change is flagged as a potential violation.
+3.  **Deterministic Abstraction**: The `normalized_hash` ensures that the Agent isn't confused by "noise" (whitespace/comments), preventing halluncinations during structural reasoning.
+4.  **No Cross-Repo Leakage**: The sensor is strictly scoped to the project root.
 
 ---
 
-## 5. Architectural Invariants
-1. **Zero Interpretive Semantics**: Vantage does not attempt to "understand" what the code does, only what it "is" in terms of structure.
-2. **Deterministic Hashing**: The same code must always produce the same signal hash across different environments.
-3. **Language-Agnostic Interface**: The output schema remains identical regardless of the source language (Rust, Python, etc.).
+## ⚡ 3. The `vantage-shim` Flow
+
+The `vantage-shim.bat` (or shell equivalent) acts as a high-speed interceptor for Agent tool-calls:
+
+-   **Input**: A path to a source file.
+-   **Action**: Calls `vantage verify --json`.
+-   **Output**: Returns the `StructuralSignal` block to the Agent.
+-   **Benefit**: This saves thousands of tokens by preventing the Agent from "swallowing" the whole file to understand its structure. The Agent only sees the **Signals**.
+
+---
+
+## 🧬 4. Cryptographic Integrity: The Double Lock
+
+| Lock Type | Source | Invariant | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Physical** | `structural_hash` | Byte-identical | Detects file-level tampering or unauthorized edits. |
+| **Structural** | `normalized_hash` | AST-identical | Detects functional changes while ignoring formatting. |
+
+---
+
+🛡️ **VANTAGE v1.2.3 - CERTIFIED STRUCTURAL SENSOR** 🛡️
