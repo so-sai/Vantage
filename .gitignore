@@ -14,3 +14,6 @@
 .agents/
 
 audit_report.json
+# .kit Memory Store
+.kit/brain.db-*
+.kit/brain.db.bak
