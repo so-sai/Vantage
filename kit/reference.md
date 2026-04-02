@@ -255,6 +255,20 @@ These workarounds preserve architecture lock while improving response time.
 - Export uses compact first-line rendering
 - Prompt budget defaults to approximately `200`
 
+## Vantage Experimental Mode (v1.2.4-EXPERIMENTAL)
+
+Vantage v1.2.4 is currently in **EXPERIMENTAL MODE** to allow for AI forensic testing.
+
+### Commands (Experimental)
+- `vantage verify <file> [--enforce]`: [Verify: STABLE], [Enforce: EXP]
+- `vantage graph <file>`: [EXP]
+- `vantage diff <file> [--seal .]`: [EXP]
+- `vantage seal <path>`: [EXP]
+- `vantage purge --force`: [EXP]
+
+> [!WARNING]
+> AI agents must treat all `vantage` outputs as forensic evidence. Results may contain noise or false positives during the v1.2.4 research cycle.
+
 ## See Also
 
 - [README.md](../README.md)
@@ -264,4 +278,4 @@ These workarounds preserve architecture lock while improving response time.
 
 ---
 
-*Last Updated: 2026-03-29 | Version: v1.2.3 STABLE | Status: SEALED*
+*Last Updated: 2026-04-02 | Version: v1.2.4-EXPERIMENTAL | Status: RESEARCH*

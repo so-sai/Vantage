@@ -18,11 +18,15 @@ vantage <command> [args] [--json]
 ```
 
 ### Commands:
-- `verify <file> [--enforce]`: Parse source, extract signals, run pipeline.
-- `graph <file>`: Extract dependency edges (calls, imports).
-- `diff <file> [--seal .]`: Compare against `VANTAGE.SEAL` baseline.
-- `seal <path>`: Create forensic baseline for a directory.
-- `purge --force`: Remove local forensic artifacts.
+- `verify <file> [--enforce (EXP)]`: Parse source, extract signals, run pipeline.
+- `graph <file> (EXP)`: Extract dependency edges (calls, imports).
+- `diff <file> [--seal .] (EXP)`: Compare against `VANTAGE.SEAL` baseline.
+- `seal <path> (EXP)`: Create forensic baseline for a directory.
+- `purge --force (EXP)`: Remove local forensic artifacts.
+
+> [!CAUTION]
+> **EXPERIMENTAL MODE ACTIVE (v1.2.4-EXPERIMENTAL)**
+> Modules marked with `(EXP)` are operational but unverified on large-scale repositories. AI Agents must treat outputs as forensic evidence requiring high-level reasoning.
 
 ---
 
@@ -82,11 +86,26 @@ AI Agents (like Antigravity) MUST adhere to these protocols when interacting wit
 
 ---
 
-## 6. COGNITIVE LAYER REFERENCE
-For detailed behavioral laws and Kit-system syntax, refer to the consolidated control layer:
-- **Constitutional Laws**: [kit/AGENTS.md](file:///kit/AGENTS.md)
-- **Syntax Reference**: [kit/reference.md](file:///kit/reference.md)
+---
+
+## 6. EXPERIMENTAL MODULES & AI TESTING
+
+### Experimental Status (v1.2.4)
+- **Verify**: STABLE. Core structural extraction is locked.
+- **Graph/Diff/Seal**: EXPERIMENTAL. These modules are open for AI testing in v1.2.4 to gather friction data for the next release.
+
+### AI Reasoning Protocol (v1.2.4-EXPERIMENTAL)
+1. **Evidence over Truth**: AI agents must not assume a `vantage` output is the final "Ground Truth". Use it as a structural signal to inform your next research step.
+2. **False Positives**: Be prepared for noise in `diff` and `graph` outputs. If a signal contradicts your source code reading, log the friction using `kit learn --kind note --tag decision`.
 
 ---
 
-*v1.2.4 — SEALED. Single Source of Truth Established.*
+## 7. ROADMAP (v1.2.5)
+
+1. **Deterministic Normalization**: Hardening AST S-expression mapping for a wider range of Rust/Python patterns.
+2. **Global Anchor Resolution**: Moving beyond local file analysis to resolve `@epistemic` anchors across the entire workspace.
+3. **Forensic Report UI**: Implementing the `vantage report` command for human-readable structural summaries.
+
+---
+
+*v1.2.4 — EXPERIMENTAL MODE ENABLED. Single Source of Truth Under Stress Test.*

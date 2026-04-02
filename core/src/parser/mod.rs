@@ -76,6 +76,7 @@ impl EpistemicParser {
         )
     }
 
+    #[tracing::instrument(skip(self, source))]
     pub fn parse_signals(&mut self, source: &str, path: &str) -> Vec<CognitiveSignal> {
         // Normalization: Replace ALL non-standard Unicode whitespace and control characters
         // with byte-equivalent ASCII spaces. This prevents tree-sitter from treating
@@ -117,7 +118,10 @@ impl EpistemicParser {
         }
 
         // Vantage v1.2.3: Zero-Corruption Normalization Layer
-        let tree = self.parser.parse(&normalized, None).expect("Parse failed");
+        let tree = self.parser.parse(&normalized, None).unwrap_or_else(|| {
+            tracing::error!("Structural parse failed for file: {}", path);
+            std::process::exit(1); // Still prefer exit over panic in binary
+        });
         let root = tree.root_node();
         let mut signals = Vec::new();
 
@@ -130,6 +134,7 @@ impl EpistemicParser {
     }
 
     /// Parse source and return both signals and dependency graph.
+    #[tracing::instrument(skip(self, source))]
     pub fn parse_with_graph(
         &mut self,
         source: &str,
@@ -160,7 +165,10 @@ impl EpistemicParser {
             }
         }
 
-        let tree = self.parser.parse(&normalized, None).expect("Parse failed");
+        let tree = self.parser.parse(&normalized, None).unwrap_or_else(|| {
+            tracing::error!("Graph structural parse failed for file: {}", path);
+            std::process::exit(1);
+        });
         let root = tree.root_node();
         let mut signals = Vec::new();
         self.extract_and_normalize(root, &normalized, &mut signals, path);
@@ -543,9 +551,9 @@ impl EpistemicParser {
     }
 }
 
-pub fn get_parser(lang: Language) -> EpistemicParser {
+pub fn get_parser(lang: Language) -> Result<EpistemicParser, String> {
     match lang {
-        Language::Rust => EpistemicParser::new_rust_parser().unwrap(),
-        Language::Python => EpistemicParser::new_python_parser().unwrap(),
+        Language::Rust => EpistemicParser::new_rust_parser(),
+        Language::Python => EpistemicParser::new_python_parser(),
     }
 }

@@ -12,6 +12,7 @@ pub mod fingerprint;
 pub mod graph;
 pub mod intent;
 pub mod parser;
+pub mod analytics;
 
 // Active exports (used by CLI + pipeline)
 pub use cognition::{

@@ -41,3 +41,9 @@ kit recall
 2. **Skeleton Check**: `kit context` để xem Symbol Graph trước khi sửa code.
 3. **Hard Gate**: `preflight` chặn là dừng. Không lách luật.
 4. **Friction Log**: Thấy xung đột? `kit learn --auto` ngay.
+5. **Experimental Evidence**: Khi dùng `vantage` ở mode (EXP), AI phải lý luận dựa trên evidence, không coi output là Absolute Ground Truth.
+
+## 🧭 [EXPERIMENTAL v1.2.4-EXPERIMENTAL]
+- **Status**: Stable v1.2.4 core + Experimental CLI Expose.
+- **Goal**: Research and refine structural identity before v1.2.5.
+- **Reporting**: Mọi lỗi or noise trong `vantage diff/graph` phải được log vào `.kit`.

@@ -10,7 +10,6 @@ pub use hash::{HashAlgorithm, SemanticHash, StructuralHash};
 pub use signal::{CognitiveSignal, Origin, SourceLocation};
 pub use symbol::SymbolKind;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -65,7 +64,8 @@ pub struct Identity {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Authority {
     pub issued_by: String,
-    pub issued_at: DateTime<Utc>,
+    /// Unix Epoch (Forensic Standard)
+    pub issued_at: u64,
     pub authority_level: AuthorityLevel,
     pub human_acknowledgement: bool,
 }

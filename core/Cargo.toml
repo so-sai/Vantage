@@ -18,10 +18,15 @@ vantage-types = { path = "../types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10.9"
-chrono = { version = "0.4", features = ["serde"] }
 tree-sitter = "0.24"
 tree-sitter-rust = "0.23"
 tree-sitter-python = "0.23"
+
+# Elite Architecture (v1.2.4)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+anyhow = "1.0"
+polars = { version = "0.52", default-features = false, features = ["lazy"] }
 
 [dev-dependencies]
 proptest = "1.0"

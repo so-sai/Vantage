@@ -12,27 +12,24 @@ path = "src/main.rs"
 # Core dependency
 vantage-core = { path = "../core" }
 
-# CLI parsing
-clap = { version = "4.5", features = ["derive"] }
+# CLI parsing (Ultra-Lean: minimal features for zero-lag)
+clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
 
 # Error handling
 anyhow = "1.0"
 
-# JSON & Serialization
+# Observability (Pruned: No Async, minimal tracing)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "env-filter", "ansi"] }
+
+# JSON & Serialization (Mandatory for Kit Integration)
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Time for sealing
-chrono = { version = "0.4", features = ["serde"] }
-
-# High-performance directory walking (Sạch bóng rác v1.2.2)
+# High-performance directory walking
 ignore = "0.4"
-
-# UI cho Forensic report
-colored = "2.1"
 
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "3.0"
 tempfile = "3.10"
-

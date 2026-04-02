@@ -3,11 +3,12 @@
 //! Handles Forensic Structural Intents with optional enforcement pipeline.
 //! Pipeline: signal → claim → invariant → decision.
 
+use crate::term::*;
 use anyhow::{Context, Result};
-use colored::*;
 use ignore::WalkBuilder;
 use serde_json::json;
 use std::path::PathBuf;
+use std::time::UNIX_EPOCH;
 use vantage_core::cognition::{ClaimType, Decision, InvariantRule, Pipeline};
 use vantage_core::parser::Language;
 use vantage_core::FailureReason;
@@ -28,6 +29,7 @@ fn print_json_error(reason: FailureReason, message: &str, file: Option<&str>) {
 }
 
 /// Analyze a single file and output structural signals
+#[tracing::instrument(skip(path))]
 pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Result<()> {
     let path_str = path.to_string_lossy().to_string();
     let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
@@ -134,6 +136,7 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
     Ok(())
 }
 
+#[tracing::instrument(skip(path))]
 fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> {
     let path_str = path.to_string_lossy().to_string();
 
@@ -169,30 +172,28 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
     } else {
         println!(
             "{}",
-            "🛡️  VANTAGE ENFORCEMENT PIPELINE (v1.2.4)"
-                .bright_yellow()
-                .bold()
+            bold!(yellow!("🛡️  VANTAGE ENFORCEMENT PIPELINE (v1.2.4-ULTRA-LEAN)"))
         );
-        println!("📁 File: {}", path_str.bright_blue());
+        println!("📁 File: {}", blue!(path_str));
         println!(
             "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+            dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         );
 
         println!(
             "\n📡 Signals: {}",
-            result.signals.len().to_string().yellow()
+            yellow!(result.signals.len().to_string())
         );
         for sig in &result.signals {
             println!(
                 "  └─ [{:?}] {} :: {}",
                 sig.symbol_kind,
-                sig.symbol_id.green(),
-                &sig.structural_hash[..8].cyan()
+                green!(sig.symbol_id),
+                cyan!(&sig.structural_hash[..8])
             );
         }
 
-        println!("\n🧠 Claims: {}", result.claims.len().to_string().yellow());
+        println!("\n🧠 Claims: {}", yellow!(result.claims.len().to_string()));
         for claim in &result.claims {
             println!(
                 "  └─ [{:?}] (confidence: {:.0}%)",
@@ -204,17 +205,17 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
         println!("\n⚖️  Verdicts:");
         for verdict in &result.verdicts {
             let symbol = match verdict.decision {
-                Decision::Allow => "✅".green(),
-                Decision::Warn => "⚠️ ".yellow(),
-                Decision::Reject => "🚫".red(),
+                Decision::Allow => green!("✅"),
+                Decision::Warn => yellow!("⚠️ "),
+                Decision::Reject => red!("🚫"),
             };
             println!("  {} [{:?}] {}", symbol, verdict.decision, verdict.reason);
         }
 
         let final_color = match result.final_decision {
-            Decision::Allow => "ALLOW".green().bold(),
-            Decision::Warn => "WARN".yellow().bold(),
-            Decision::Reject => "REJECT".red().bold(),
+            Decision::Allow => bold!(green!("ALLOW")),
+            Decision::Warn => bold!(yellow!("WARN")),
+            Decision::Reject => bold!(red!("REJECT")),
         };
         println!("\n🏁 Final Decision: {}", final_color);
 
@@ -227,18 +228,11 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
 }
 
 /// Execute Seal intent to finalize structural baseline
+#[tracing::instrument(skip(path))]
 pub fn execute_seal(path: PathBuf) -> Result<()> {
-    println!(
-        "{}",
-        "🛡️  VANTAGE STRUCTURAL SEALING (v1.2.4)"
-            .bright_yellow()
-            .bold()
-    );
-    println!("📁 Target: {}", path.display().to_string().bright_blue());
-    println!(
-        "{}",
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
-    );
+    println!("{}", bold!(yellow!("🛡️  VANTAGE STRUCTURAL SEALING (v1.2.4-ULTRA-LEAN)")));
+    println!("📁 Target: {}", blue!(path.display().to_string()));
+    println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
     let mut map = Vec::new();
     let walker = WalkBuilder::new(&path)
@@ -281,9 +275,14 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
         }
     }
 
+    let ts = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .context("Time drift detected")?
+        .as_secs();
+
     let seal_data = json!({
-        "v": "1.2.4",
-        "ts": chrono::Utc::now().to_rfc3339(),
+        "v": "1.2.4-ULTRA-LEAN",
+        "ts": ts,
         "map": map,
     });
 
@@ -304,8 +303,9 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
 }
 
 /// Purge local forensic artifacts
+#[tracing::instrument]
 pub fn execute_purge(force: bool) -> Result<()> {
-    println!("{}", "🧹 VANTAGE PURGE".bright_red().bold());
+    println!("{}", bold!(red!("🧹 VANTAGE PURGE")));
 
     if !force {
         anyhow::bail!("Purge requires {} flag for safety.", "--force".yellow());
@@ -327,6 +327,7 @@ pub fn execute_purge(force: bool) -> Result<()> {
 }
 
 /// Diff current file against VANTAGE.SEAL baseline
+#[tracing::instrument(skip(path, seal_path))]
 pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result<()> {
     use vantage_core::parser::Language;
     use vantage_core::DriftReport;
@@ -485,6 +486,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
 }
 
 /// Extract dependency graph from source file
+#[tracing::instrument(skip(path))]
 pub fn execute_graph(path: PathBuf, use_json: bool) -> Result<()> {
     use vantage_core::parser::Language;
 

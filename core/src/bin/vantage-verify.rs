@@ -60,7 +60,23 @@ fn main() {
         }
     };
 
-    let mut parser = get_parser(lang);
+    let mut parser = match get_parser(lang) {
+        Ok(p) => p,
+        Err(e) => {
+            if use_json {
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "status": "error",
+                        "reason": format!("Internal error: {}", e)
+                    })
+                );
+            } else {
+                eprintln!("❌ Internal error: {}", e);
+            }
+            std::process::exit(1);
+        }
+    };
 
     let content = match std::fs::read_to_string(file_path) {
         Ok(c) => c,
@@ -89,8 +105,14 @@ fn main() {
             Language::Rust => tree_sitter_rust::LANGUAGE.into(),
             Language::Python => tree_sitter_python::LANGUAGE.into(),
         };
-        p.set_language(&lang_ts).unwrap();
-        let tree = p.parse(&content, None).unwrap();
+        let _ = p.set_language(&lang_ts);
+        let tree = match p.parse(&content, None) {
+            Some(t) => t,
+            None => {
+                eprintln!("❌ DEBUG: Parse failed");
+                std::process::exit(1);
+            }
+        };
         print_tree(tree.root_node(), 0);
         println!("--- End of Tree ---");
     }
@@ -127,7 +149,10 @@ fn main() {
             }).collect::<Vec<_>>(),
             "reason": reason
         });
-        println!("{}", serde_json::to_string_pretty(&result).unwrap());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&result).unwrap_or_default()
+        );
     } else {
         println!("🛡️  VANTAGE STRUCTURAL VERIFY (v1.2.3-alpha)  🛡️");
         println!("📁 File: {}", file_path);
