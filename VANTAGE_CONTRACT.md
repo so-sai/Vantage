@@ -1,259 +1,85 @@
-# VANTAGE CLI CONTRACT v1.2.4
+# VANTAGE MASTER CONTRACT (v1.2.4)
 
-> **Canonical authority** for how any system (Kit, IDE, CI) invokes Vantage.
-> Vantage is a **stateless structural sensor** — not a library, not a daemon.
-> Kit calls Vantage the same way it calls `git`.
+> **CANONICAL AUTHORITY** for all structural sensors, agents, and CI interactions.
+> Vantage is a **stateless structural sensor** providing deterministic code identity.
 
 ---
 
-## Invocation
+## 1. PURPOSE & IDENTITY
+Vantage maps physical source code (L0) to structural symbols (L2) using a triple-hash identity system. It does not interpret intent; it only verifies structure and relationships.
+
+---
+
+## 2. CLI INTERFACE
+Vantage is invoked as a single-shot binary with no runtime dependencies.
 
 ```bash
 vantage <command> [args] [--json]
 ```
 
-- **Binary**: single executable, no runtime dependencies
-- **State**: none — every invocation is independent
-- **Stdout**: human-readable by default, JSON with `--json`
-- **Stderr**: nothing on success, error details on failure
-- **Exit codes**: `0` = success, `1` = failure
+### Commands:
+- `verify <file> [--enforce]`: Parse source, extract signals, run pipeline.
+- `graph <file>`: Extract dependency edges (calls, imports).
+- `diff <file> [--seal .]`: Compare against `VANTAGE.SEAL` baseline.
+- `seal <path>`: Create forensic baseline for a directory.
+- `purge --force`: Remove local forensic artifacts.
 
 ---
 
-## Commands
+## 3. OUTPUT MODEL (JSON)
+Every JSON output root contains `"v": "1.2.4"` and a `"status"` field.
 
-### `verify <path> [--json] [--enforce]`
+### CognitiveSignal Schema:
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` | Stable Epistemic identifier from `@epistemic:<uuid>` |
+| `name` | `string` | Symbol name (e.g., `calculate_total`) |
+| `kind` | `enum` | `Function`, `Class`, `Struct`, `Trait`, `Module`, etc. |
+| `structural_hash` | `sha256` | Byte-level identity (detects any change) |
+| `semantic_hash` | `sha256` | Whitespace-invariant identity |
+| `normalized_hash` | `sha256` | Rename-invariant identity (AST S-expression) |
+| `location` | `object` | `{ file, start_line, start_col, end_line, end_col }` |
 
-Parse a source file, extract epistemic signals, run pipeline.
-
-**Success output (`--json`):**
-
-```json
-{
-  "v": "1.2.4",
-  "status": "ok",
-  "file": "src/main.rs",
-  "language": "rs",
-  "signals": 3,
-  "claims": 5,
-  "verdicts": [
-    {
-      "decision": "allow",
-      "claim_id": "uuid::FunctionDefinition",
-      "reason": "no_rule_matched"
-    }
-  ],
-  "final_decision": "allow",
-  "duration_ms": 2
-}
-```
-
-**Error output (`--json`):**
-
-```json
-{
-  "v": "1.2.4",
-  "status": "error",
-  "reason": "file_read_error",
-  "message": "The system cannot find the file specified.",
-  "file": "nonexistent.rs"
-}
-```
-
-**FailureReason taxonomy:**
-
-| Enum variant | JSON value | When |
-|---|---|---|
-| `SyntaxError` | `syntax_error` | Source cannot be parsed as valid AST |
-| `UnsupportedLanguage` | `unsupported_language` | File extension has no grammar |
-| `NoAnchorFound` | `no_anchor_found` | No `@epistemic` tag in file |
-| `FileReadError` | `file_read_error` | I/O error (not found, permission) |
-| `InternalError` | `internal_error` | Vantage internal failure |
-
-**Supported languages:** `.rs` (Rust), `.py` (Python)
+### FailureReason Taxonomy:
+If `status` is `error`, `reason` will be one of:
+- `syntax_error`: Source cannot be parsed.
+- `unsupported_language`: No grammar for file extension.
+- `no_anchor_found`: No `@epistemic` tag detected.
+- `file_read_error`: I/O failure.
+- `internal_error`: Software failure.
 
 ---
 
-### `graph <path> [--json]`
+## 4. SYSTEM INVARIANTS (NON-NEGOTIABLE)
 
-Extract dependency graph (call edges, import edges) from source.
-
-**Success output (`--json`):**
-
-```json
-{
-  "v": "1.2.4",
-  "status": "ok",
-  "file": "src/main.rs",
-  "signals": 5,
-  "graph": {
-    "nodes": 5,
-    "edges": [
-      {
-        "from": "caller",
-        "to": "callee",
-        "edge_type": "calls"
-      }
-    ]
-  }
-}
-```
-
-Edges are **sorted** by `(from, to, edge_type)` for deterministic output.
+1. **Determinism**: Same source → identical JSON output across all OS/environments.
+2. **Stateless**: No internal memory, no daemon, no background process.
+3. **Triple-Hash Matrix**: 
+   - Whitespace change → `structural` changes, others same.
+   - Variable rename → `structural`/`semantic` change, `normalized` same.
+   - Logic change → ALL hashes change.
+4. **Symbol Graph**: Extracts `Calls`, `Imports`, and `Uses` edges for impact radius analysis.
+5. **Limitations**: Breaks on Unicode control chars; no stdin/stdout piping; file-only input.
 
 ---
 
-### `diff <path> [--seal <path>] [--json]`
+## 5. AGENT PROTOCOL (FOR AI AGENTS)
 
-Compare current file against VANTAGE.SEAL baseline.
+AI Agents (like Antigravity) MUST adhere to these protocols when interacting with Vantage:
 
-**Success output (`--json`):**
+### Boundary Rules:
+- **Never modify** files outside the project root.
+- **Never edit** dependencies or external toolchains.
 
-```json
-{
-  "v": "1.2.4",
-  "total_symbols": 5,
-  "unchanged": 3,
-  "structural_changes": 1,
-  "semantic_changes": 0,
-  "added": 1,
-  "removed": 0,
-  "items": [
-    {
-      "symbol_id": "alpha",
-      "status": "unchanged",
-      "old_hash": "abc123...",
-      "new_hash": "abc123...",
-      "location": "src/main.rs:10:0"
-    }
-  ]
-}
-```
+### Safety Layer:
+1. **Lazy Hydration**: Do NOT read raw file content by default. Call `vantage verify` first.
+2. **Structural Guard**: If a file has `@epistemic` markers, treat it as "Locked". Any `normalized_hash` change must be flagged for impact radius review.
+3. **Impact Radius**: Use `vantage graph` to identify affected callers BEFORE modifying a function.
 
-**DriftStatus values:**
-
-| Value | Meaning |
-|---|---|
-| `unchanged` | structural_hash AND normalized_hash identical |
-| `structural_change` | structural_hash changed, normalized_hash same (whitespace/format) |
-| `semantic_change` | normalized_hash changed (logic/structure altered) |
-| `added` | New symbol not in baseline |
-| `removed` | Baseline symbol no longer present |
+### Prohibitions:
+- **No server/daemon**: Do not attempt to run Vantage as a persistent service.
+- **No inference**: Do not "guess" the meaning of hashes; use the `diff` command for drift reporting.
 
 ---
 
-### `seal <path>`
-
-Create `VANTAGE.SEAL` forensic baseline for a directory.
-
-```json
-{
-  "v": "1.2.4",
-  "ts": "2026-04-02T...",
-  "map": [
-    {
-      "f": "src/main.rs",
-      "s": "solve",
-      "h": "a1b2c3d4..."
-    }
-  ]
-}
-```
-
----
-
-### `purge --force`
-
-Remove local forensic artifacts (`VANTAGE.SEAL`).
-
----
-
-## Guarantees
-
-### ✅ Promised
-
-1. **Deterministic output**: Same source → same JSON on every run, every machine
-2. **Stable ordering**: Signals sorted by byte position, edges sorted lexicographically
-3. **Versioned contract**: Every JSON root contains `"v": "1.2.4"`
-4. **No panic**: All errors return structured JSON with `status: "error"`
-5. **Backward compatible**: New fields are additive; old fields never removed
-6. **Zero config**: No `vantage.toml`, no environment variables required
-7. **Stateless**: No daemon, no memory between invocations, no background process
-
-### ❌ Non-goals
-
-1. **No memory**: Vantage does not store or recall previous runs
-2. **No interpretation**: Vantage does not understand business logic or intent
-3. **No background process**: Vantage exits immediately after producing output
-4. **No config files**: Vantage has no configuration — it is a pure sensor
-5. **No plugin system**: Vantage's behavior is fixed at compile time
-
----
-
-## Hash Semantics
-
-| Hash | What it detects | Invariant to |
-|---|---|---|
-| `structural_hash` | ANY physical change in the symbol | Nothing — detects all changes |
-| `semantic_hash` | Logic changes, identifier changes | Whitespace, formatting |
-| `normalized_hash` | Structural/AST changes | Variable names, string values, integers |
-
-**Triple hash decision matrix:**
-
-| Scenario | structural | semantic | normalized |
-|---|---|---|---|
-| Whitespace reformat | Changed | Same | Same |
-| Variable rename | Changed | Changed | Same |
-| Logic change (`+` → `-`) | Changed | Changed | Changed |
-| No change | Same | Same | Same |
-
----
-
-## Cross-Platform Determinism
-
-- Line endings: `\r\n` and `\n` produce **identical hashes**
-- Encoding: UTF-8 assumed; non-UTF8 bytes normalized to spaces
-- Traversal order: Pre-order AST walk, signals sorted by `byte_start`
-- Edge order: Sorted by `(from, to, edge_type)`
-
----
-
-## Performance Baseline
-
-| File size | Pipeline time |
-|---|---|
-| Small (< 500 LOC) | < 5ms |
-| Large (> 2000 LOC) | < 20ms |
-
-Measured via `duration_ms` field in JSON output.
-Process startup overhead (~300ms on Windows) is NOT included.
-
----
-
-## Known Limitations (v1.2.4)
-
-### Comment Sensitivity
-
-Comments inside function bodies may affect `normalized_hash` due to tree-sitter parsing behavior. This can cause **false-positive drift detection** when comments are added or modified.
-
-- **Root cause**: tree-sitter includes comment nodes in AST; anonymous node logic may capture punctuation from comments.
-- **Severity**: Medium — affects trust, not correctness.
-- **Planned fix**: v1.2.5 (comment filtering in normalized AST walk).
-- **Kit mitigation**: Kit may discount drift signals where only comment content changed.
-
----
-
-## Kit Integration Notes
-
-Kit v1.2.4+ should:
-
-1. Call `vantage verify <file> --json` for each file with `@epistemic` tags
-2. Parse `"v"` field to determine output schema version
-3. Use `FailureReason` to decide recovery strategy (skip, retry, report)
-4. Monitor `duration_ms` for performance regression detection
-5. Use `normalized_hash` for rename-invariant drift detection
-6. Use `graph` output to compute impact radius before changing functions
-
----
-
-*v1.2.4 — LOCKED. No contract changes without version bump.*
+*v1.2.4 — SEALED. Single Source of Truth Established.*

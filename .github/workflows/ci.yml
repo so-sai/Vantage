@@ -19,6 +19,13 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
+      - name: Security Guard (.kit invariant)
+        run: |
+          if git ls-files | grep -q ".kit"; then
+            echo "❌ SECURITY VIOLATION: .kit tracked in Git tree."
+            exit 1
+          fi
+
       - name: Setup Rust (Stable)
         uses: actions-rs/toolchain@v1
         with:
