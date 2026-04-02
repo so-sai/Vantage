@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Security Guard (.kit invariant)
+        shell: bash
         run: |
           if git ls-files | grep -q ".kit"; then
             echo "❌ SECURITY VIOLATION: .kit tracked in Git tree."

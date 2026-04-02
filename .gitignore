@@ -7,4 +7,10 @@
 
 # .kit Cognitive Memory (Protected)
 .kit/
+
+# Linter & IDE Noise
+.ruff_cache/
+.vscode/
+.agents/
+
 audit_report.json
