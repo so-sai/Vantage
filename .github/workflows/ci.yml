@@ -22,7 +22,7 @@ jobs:
       - name: Security Guard (.kit invariant)
         shell: bash
         run: |
-          if git ls-files | grep -q ".kit"; then
+          if git ls-files | grep -qF ".kit"; then
             echo "❌ SECURITY VIOLATION: .kit tracked in Git tree."
             exit 1
           fi
