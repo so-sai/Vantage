@@ -19,6 +19,12 @@ For all CLI commands, JSON schemas, Agent protocols, and Technical specification
 
 ---
 
+### 🧠 Cognitive Layer
+For Agent protocols, constitutional invariants, and Kit syntax, see:
+👉 **[kit/AGENTS.md](file:///kit/AGENTS.md)**
+
+---
+
 ### 🚀 Quick Start
 ```bash
 # Verify a file

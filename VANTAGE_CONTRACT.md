@@ -82,4 +82,11 @@ AI Agents (like Antigravity) MUST adhere to these protocols when interacting wit
 
 ---
 
+## 6. COGNITIVE LAYER REFERENCE
+For detailed behavioral laws and Kit-system syntax, refer to the consolidated control layer:
+- **Constitutional Laws**: [kit/AGENTS.md](file:///kit/AGENTS.md)
+- **Syntax Reference**: [kit/reference.md](file:///kit/reference.md)
+
+---
+
 *v1.2.4 — SEALED. Single Source of Truth Established.*
