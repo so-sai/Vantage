@@ -1,0 +1,10 @@
+[workspace]
+resolver = "3"
+
+members = ["core", "types", "cli"]
+
+[profile.release]
+opt-level = "z"     # Tối ưu hóa kích thước binary
+lto = true          # Link Time Optimization để nén code rác
+codegen-units = 1
+strip = true        # Xóa bỏ symbol dư thừa (đúng chất plugin bí mật)

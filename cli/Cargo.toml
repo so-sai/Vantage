@@ -1,0 +1,38 @@
+[package]
+name = "vantage-cli"
+version = "1.2.4"
+edition = "2024"
+description = "CLI Adapter for Vantage Cognitive Artifact Factory"
+
+[[bin]]
+name = "vantage"
+path = "src/main.rs"
+
+[dependencies]
+# Core dependency
+vantage-core = { path = "../core" }
+
+# CLI parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+
+# JSON & Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time for sealing
+chrono = { version = "0.4", features = ["serde"] }
+
+# High-performance directory walking (Sạch bóng rác v1.2.2)
+ignore = "0.4"
+
+# UI cho Forensic report
+colored = "2.1"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
+tempfile = "3.10"
+

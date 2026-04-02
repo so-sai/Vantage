@@ -1,0 +1,24 @@
+{
+  "map": [
+    {
+      "f": "python\\simple.py",
+      "h": "d4075ab65055854d58df557d3c189a3d1f0fa3bba9d9c6343936db7877d1fb89",
+      "n": "a887a633961e6f47a8594008134d959b2dc05159b31ea63c6a5cae8600560ac1",
+      "s": "process_data"
+    },
+    {
+      "f": "rust\\simple.rs",
+      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
+      "n": "d1fb5fe8a51d8df72bbae71995468f4412341270e2e3b24e9f1eada40f23da55",
+      "s": "solve"
+    },
+    {
+      "f": "rust\\simple.rs",
+      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
+      "n": "d1fb5fe8a51d8df72bbae71995468f4412341270e2e3b24e9f1eada40f23da55",
+      "s": "solve"
+    }
+  ],
+  "ts": "2026-04-02T08:52:03.057418600+00:00",
+  "v": "1.2.4"
+}

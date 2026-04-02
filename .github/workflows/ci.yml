@@ -1,0 +1,40 @@
+name: Vantage Native Integrity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Integrity Check (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (Stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Vantage CLI (Release)
+        run: cargo build --release
+
+      - name: Run Native Rust Tests
+        run: cargo test --all
+
+      - name: Integrity Check (Linux/Bash)
+        if: runner.os != 'Windows'
+        run: bash scripts/integrity_check.sh
+
+      - name: Integrity Check (Windows/PWSH)
+        if: runner.os == 'Windows'
+        run: pwsh scripts/integrity_check.ps1

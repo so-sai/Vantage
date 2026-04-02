@@ -1,0 +1,10 @@
+/target
+/Cargo.lock
+*.log
+*.tmp
+*.bak
+.DS_Store
+
+# .kit Cognitive Memory (Protected)
+.kit/
+audit_report.json

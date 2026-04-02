@@ -1,0 +1,54 @@
+{
+  "map": [
+    {
+      "f": "core\\test_sample.rs",
+      "h": "86002cbc8076c572ce99c18faed10fffc804a2e60622ee4ad7b6f3602aef349d",
+      "n": "8b533d1e53ea6c6498c9dfe36e8e343aa9df684585352d17426e239c9e73078b",
+      "s": "test_function"
+    },
+    {
+      "f": "core\\test_sample.rs",
+      "h": "3c906ca928d6971a14324a10b32c7245ca30e7420af91871d352c8c3b0b7af66",
+      "n": "04e5dedb018a44c83a77cf2160d093ee99a3346ded0e7877f12c4c01544a5073",
+      "s": "TestStruct"
+    },
+    {
+      "f": "core\\test_sample.rs",
+      "h": "6d8cf88736bc3b4f5f8cafd4d750f877d95772af08d2c8d9f327d93f8b717cca",
+      "n": "912a4dac66f45a77f379fd27e381a8bd71e217571501a2c04cbf82c7ea1a6b7d",
+      "s": "TEST_CONST"
+    },
+    {
+      "f": "examples\\python\\simple.py",
+      "h": "d4075ab65055854d58df557d3c189a3d1f0fa3bba9d9c6343936db7877d1fb89",
+      "n": "b02d104ca15342e136312cf39148db2e576d9c3e04d63f1ec4eaac05364d000d",
+      "s": "process_data"
+    },
+    {
+      "f": "examples\\rust\\simple.rs",
+      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
+      "n": "4fe89650e1266a5dafa55df4e5aa8c12183ce6b6bdced0294b45c4537a2fe704",
+      "s": "solve"
+    },
+    {
+      "f": "examples\\rust\\simple.rs",
+      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
+      "n": "4fe89650e1266a5dafa55df4e5aa8c12183ce6b6bdced0294b45c4537a2fe704",
+      "s": "solve"
+    },
+    {
+      "f": "types\\src\\lib.rs",
+      "h": "484fa0744ca46d9e67b4cf0217570cd3ef0d51cc90952e390140b22b8cb9b5aa",
+      "n": "b77e325e73a836f95e9d6444192afd3aef858418eb2914042a7cf56f078e26c9",
+      "s": "hash"
+    },
+    {
+      "f": "types\\src\\signal.rs",
+      "h": "877e6a835959932955bd3294b1b2910bf20aa9580e345203d534a1982f37f513",
+      "n": "47b270530bd79bc0ad1fa00f7bd37e588728026de4c36db68d4630bda525c376",
+      "s": "SourceLocation"
+    }
+  ],
+  "ts": "2026-04-02T09:58:52.887779400+00:00",
+  "v": "1.2.4"
+}
