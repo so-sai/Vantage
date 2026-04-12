@@ -92,45 +92,52 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                 "status": "ok",
                 "file": result.file,
                 "language": ext,
-                "signals": result.signals.len(),
-                "claims": result.claims.len(),
+                "signals": result.signals.iter().map(|s| json!({
+                    "type": format!("{:?}", s.symbol_kind).to_lowercase(),
+                    "id": s.symbol_id,
+                    "line": s.location.start_line,
+                    "hash": s.structural_hash,
+                    "norm_hash": s.normalized_hash,
+                })).collect::<Vec<_>>(),
+                "claims": result.claims.iter().map(|c| json!({
+                    "type": format!("{:?}", c.claim_type).to_lowercase(),
+                    "label": format!("{:?}", c.label),
+                    "confidence": c.confidence,
+                })).collect::<Vec<_>>(),
                 "verdicts": result.verdicts,
                 "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
                 "duration_ms": result.duration_ms,
             }))?
         );
     } else {
-        println!("⚓ Anchor: {}", path_str.bright_blue());
-        println!("Signals: {}", result.signals.len().to_string().yellow());
+        println!("[*] File: {}", path_str);
+        println!("[*] Signals: {}", result.signals.len());
         for sig in &result.signals {
             println!(
-                "  └─ [{:?}] {} :: {}",
+                "  - [{:?}] {} :: {}",
                 sig.symbol_kind,
-                sig.symbol_id.green(),
-                &sig.structural_hash[..8].cyan()
+                sig.symbol_id,
+                &sig.structural_hash[..8]
             );
         }
-        println!("Claims: {}", result.claims.len().to_string().yellow());
+        println!("[*] Claims: {}", result.claims.len());
         for claim in &result.claims {
             println!(
-                "  └─ [{:?}] (confidence: {:.0}%)",
+                "  - [{:?}] ({:.0}%)",
                 claim.claim_type,
                 claim.confidence * 100.0
             );
         }
-        println!("Verdicts: {}", result.verdicts.len().to_string().yellow());
+        println!("[*] Verdicts: {}", result.verdicts.len());
         for verdict in &result.verdicts {
             let symbol = match verdict.decision {
-                Decision::Allow => "✅",
-                Decision::Warn => "⚠️",
-                Decision::Reject => "🚫",
+                Decision::Allow => "OK",
+                Decision::Warn => "WARN",
+                Decision::Reject => "BLOCK",
             };
-            println!(
-                "  {} [{:?}] {} - {}",
-                symbol, verdict.decision, verdict.claim_id, verdict.reason
-            );
+            println!("  [{}] {}", symbol, verdict.reason);
         }
-        println!("⏱️  {}ms", result.duration_ms.to_string().bright_black());
+        println!("[*] Duration: {}ms", result.duration_ms);
     }
 
     Ok(())
@@ -172,13 +179,12 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
     } else {
         println!(
             "{}",
-            bold!(yellow!("🛡️  VANTAGE ENFORCEMENT PIPELINE (v1.2.4-ULTRA-LEAN)"))
+            bold!(yellow!(
+                "🛡️  VANTAGE ENFORCEMENT PIPELINE (v1.2.4-ULTRA-LEAN)"
+            ))
         );
         println!("📁 File: {}", blue!(path_str));
-        println!(
-            "{}",
-            dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        );
+        println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
         println!(
             "\n📡 Signals: {}",
@@ -230,7 +236,12 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
 /// Execute Seal intent to finalize structural baseline
 #[tracing::instrument(skip(path))]
 pub fn execute_seal(path: PathBuf) -> Result<()> {
-    println!("{}", bold!(yellow!("🛡️  VANTAGE STRUCTURAL SEALING (v1.2.4-ULTRA-LEAN)")));
+    println!(
+        "{}",
+        bold!(yellow!(
+            "🛡️  VANTAGE STRUCTURAL SEALING (v1.2.4-ULTRA-LEAN)"
+        ))
+    );
     println!("📁 Target: {}", blue!(path.display().to_string()));
     println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
 
@@ -289,15 +300,9 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
     let seal_path = path.join("VANTAGE.SEAL");
     std::fs::write(&seal_path, serde_json::to_string_pretty(&seal_data)?)?;
 
-    println!("✅ SUCCESS: Forensic baseline established.");
-    println!(
-        "📦 Map contains {} structural signals.",
-        map.len().to_string().yellow()
-    );
-    println!(
-        "📝 Written to: {}",
-        seal_path.display().to_string().bright_green()
-    );
+    println!("[OK] Forensic baseline established.");
+    println!("[*] Map contains {} structural signals.", map.len());
+    println!("[*] Written to: {}", seal_path.display());
 
     Ok(())
 }
@@ -305,24 +310,21 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
 /// Purge local forensic artifacts
 #[tracing::instrument]
 pub fn execute_purge(force: bool) -> Result<()> {
-    println!("{}", bold!(red!("🧹 VANTAGE PURGE")));
+    println!("[VANTAGE PURGE]");
 
     if !force {
-        anyhow::bail!("Purge requires {} flag for safety.", "--force".yellow());
+        anyhow::bail!("Purge requires --force flag for safety.");
     }
 
     let seal_path = PathBuf::from("VANTAGE.SEAL");
     if seal_path.exists() {
         std::fs::remove_file(&seal_path)?;
-        println!(
-            "🗑️ Removed: {}",
-            seal_path.display().to_string().bright_green()
-        );
+        println!("[*] Removed: {}", seal_path.display());
     } else {
-        println!("ℹ️ No forensic artifacts found to purge.");
+        println!("[!] No forensic artifacts found to purge.");
     }
 
-    println!("✨ Workspace is now clean.");
+    println!("[*] Workspace is now clean.");
     Ok(())
 }
 
@@ -336,21 +338,16 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
     let lang = Language::from_extension(ext)
         .ok_or_else(|| anyhow::anyhow!("Unsupported file extension: {}", ext))?;
 
-    // Parse current file
     let source = std::fs::read_to_string(&path).context("Failed to read file")?;
     let mut pipeline = Pipeline::new(lang).map_err(|e| anyhow::anyhow!(e))?;
     let current_result = pipeline.run(&source, &path.to_string_lossy());
 
-    // Parse baseline seal
     let seal_data = std::fs::read_to_string(&seal_path)
         .context("VANTAGE.SEAL not found. Run 'vantage seal' first.")?;
     let seal: serde_json::Value = serde_json::from_str(&seal_data)?;
 
-    // Extract baseline signals for this file from seal
-    // Match by normalized_hash (rename-invariant) instead of symbol_id
     let file_rel = path.file_name().unwrap_or_default().to_string_lossy();
 
-    // Build baseline signals from seal data (minimal CognitiveSignal reconstruction)
     let baseline_signals: Vec<vantage_core::CognitiveSignal> = seal["map"]
         .as_array()
         .unwrap_or(&Vec::new())
@@ -389,7 +386,6 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
         })
         .collect();
 
-    // Build current signals indexed by normalized_hash for rename-invariant matching
     let current_by_norm: std::collections::HashMap<String, &vantage_core::CognitiveSignal> =
         current_result
             .signals
@@ -397,9 +393,6 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             .map(|s| (s.normalized_hash.clone(), s))
             .collect();
 
-    // For each baseline signal: if normalized_hash matches current, update structural_hash
-    // to baseline value so DriftReport can detect drift. If no match, keep baseline as-is
-    // so DriftReport detects it as "removed".
     let aligned_baseline: Vec<vantage_core::CognitiveSignal> = baseline_signals
         .iter()
         .map(|baseline| {
@@ -422,52 +415,31 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
         }
         println!("{}", serde_json::to_string_pretty(&output)?);
     } else {
-        println!(
-            "{}",
-            "📊 VANTAGE DRIFT REPORT (v1.2.4)".bright_yellow().bold()
-        );
-        println!("📁 File: {}", path.to_string_lossy().bright_blue());
-        println!(
-            "📦 Baseline: {}",
-            seal_path.display().to_string().bright_black()
-        );
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
-        );
+        println!("[VANTAGE DRIFT REPORT v1.2.4]");
+        println!("[*] File: {}", path.to_string_lossy());
+        println!("[*] Baseline: {}", seal_path.display());
+        println!();
+        println!("[*] Summary:");
+        println!("  Total symbols: {}", report.total_symbols);
+        println!("  Unchanged:    {}", report.unchanged);
+        println!("  Struct chg:  {}", report.structural_changes);
+        println!("  Semantic:    {}", report.semantic_changes);
+        println!("  Added:      {}", report.added);
+        println!("  Removed:    {}", report.removed);
 
-        println!("\n📊 Summary:");
-        println!(
-            "  Total symbols: {}",
-            report.total_symbols.to_string().yellow()
-        );
-        println!("  ✅ Unchanged:  {}", report.unchanged.to_string().green());
-        println!(
-            "  🔶 Struct chg: {}",
-            report.structural_changes.to_string().yellow()
-        );
-        println!(
-            "  🔴 Semantic:   {}",
-            report.semantic_changes.to_string().red()
-        );
-        println!("  ➕ Added:      {}", report.added.to_string().cyan());
-        println!("  ➖ Removed:    {}", report.removed.to_string().magenta());
-
-        println!("\n📋 Details:");
+        println!();
+        println!("[*] Details:");
         for item in &report.items {
-            let (symbol, desc) = match item.status {
-                vantage_core::DriftStatus::Unchanged => ("✅", "unchanged".green()),
-                vantage_core::DriftStatus::StructuralChange => ("🔶", "structural change".yellow()),
-                vantage_core::DriftStatus::SemanticChange => ("🔴", "semantic change".red()),
-                vantage_core::DriftStatus::Added => ("➕", "added".cyan()),
-                vantage_core::DriftStatus::Removed => ("➖", "removed".magenta()),
+            let (status_str, desc) = match item.status {
+                vantage_core::DriftStatus::Unchanged => ("OK", "unchanged"),
+                vantage_core::DriftStatus::StructuralChange => ("CHG", "structural change"),
+                vantage_core::DriftStatus::SemanticChange => ("SEM", "semantic change"),
+                vantage_core::DriftStatus::Added => ("+", "added"),
+                vantage_core::DriftStatus::Removed => ("-", "removed"),
             };
             println!(
-                "  {} {} @ {} — {}",
-                symbol,
-                item.symbol_id.green(),
-                item.location.bright_black(),
-                desc
+                "  [{}] {} @ {} - {}",
+                status_str, item.symbol_id, item.location, desc
             );
         }
 
@@ -476,9 +448,11 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             || report.added > 0
             || report.removed > 0;
         if has_changes {
-            println!("\n{}", "⚠️  DRIFT DETECTED".red().bold());
+            println!();
+            println!("[!] DRIFT DETECTED");
         } else {
-            println!("\n{}", "✅ NO DRIFT".green().bold());
+            println!();
+            println!("[OK] NO DRIFT");
         }
     }
 
@@ -517,56 +491,36 @@ pub fn execute_graph(path: PathBuf, use_json: bool) -> Result<()> {
             }))?
         );
     } else {
-        println!(
-            "{}",
-            "🕸️  VANTAGE SYMBOL GRAPH (v1.2.4)".bright_yellow().bold()
-        );
-        println!("📁 File: {}", path.to_string_lossy().bright_blue());
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
-        );
-
-        println!("\n📡 Signals: {}", signals.len().to_string().yellow());
+        println!("[VANTAGE SYMBOL GRAPH v1.2.4]");
+        println!("[*] File: {}", path.to_string_lossy());
+        println!();
+        println!("[*] Signals: {}", signals.len());
         for sig in &signals {
-            println!("  └─ [{:?}] {}", sig.symbol_kind, sig.symbol_id.green());
+            println!("  - [{:?}] {}", sig.symbol_kind, sig.symbol_id);
         }
 
-        println!("\n🔗 Edges: {}", graph.edges.len().to_string().yellow());
+        println!();
+        println!("[*] Edges: {}", graph.edges.len());
         for edge in &graph.edges {
             let arrow = match edge.edge_type {
-                vantage_core::EdgeType::Calls => "→ calls →",
-                vantage_core::EdgeType::Imports => "→ imports →",
-                vantage_core::EdgeType::Uses => "→ uses →",
+                vantage_core::EdgeType::Calls => "-> calls ->",
+                vantage_core::EdgeType::Imports => "-> imports ->",
+                vantage_core::EdgeType::Uses => "-> uses ->",
             };
-            println!(
-                "  {} {} {}",
-                edge.from.cyan(),
-                arrow.bright_black(),
-                edge.to.cyan()
-            );
+            println!("  {} {} {}", edge.from, arrow, edge.to);
         }
 
         if graph.edges.is_empty() {
             println!("  (no call/import edges detected)");
         }
 
-        // Show impact radius for each signal
         if !signals.is_empty() && !graph.edges.is_empty() {
-            println!("\n💥 Impact Radius:");
+            println!();
+            println!("[*] Impact Radius:");
             for sig in &signals {
                 let impacted = graph.impact_radius(&sig.symbol_id);
                 if !impacted.is_empty() {
-                    println!(
-                        "  {} ← {}",
-                        sig.symbol_id.green(),
-                        impacted
-                            .iter()
-                            .map(|s| s.to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                            .yellow()
-                    );
+                    println!("  {} <- {}", sig.symbol_id, impacted.join(", "));
                 }
             }
         }

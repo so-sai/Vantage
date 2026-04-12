@@ -2,9 +2,9 @@
 :: kit-vantage.bat - Vantage CLI Shim (v1.2.3)
 :: Purpose: Provide a stable entry point for Agent structural commands.
 
-set "BIN_PATH=%~dp0target\debug\vantage.exe"
+set "BIN_PATH=%~dp0..\target\debug\vantage.exe"
 if not exist "%BIN_PATH%" (
-    set "BIN_PATH=%~dp0target\release\vantage.exe"
+    set "BIN_PATH=%~dp0..\target\release\vantage.exe"
 )
 
 if not exist "%BIN_PATH%" (
