@@ -12,7 +12,6 @@ pub mod fingerprint;
 pub mod graph;
 pub mod intent;
 pub mod parser;
-pub mod analytics;
 
 // Active exports (used by CLI + pipeline)
 pub use cognition::{
@@ -20,8 +19,9 @@ pub use cognition::{
     Verdict,
 };
 pub use drift::{DriftItem, DriftReport, DriftStatus};
-pub use graph::{Edge, EdgeType, SymbolGraph, SymbolNode};
+pub use graph::{SymbolDependencyGraph, DepNode};
 pub use parser::{EpistemicParser, Language, get_parser};
+pub use vantage_types::introspection_registry::CAPABILITY_REGISTRY;
 pub use vantage_types::signal::{CognitiveSignal, Origin, SourceLocation};
 pub use vantage_types::symbol::SymbolKind;
 pub use vantage_types::FailureReason;

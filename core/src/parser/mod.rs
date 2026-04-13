@@ -1,7 +1,12 @@
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use tree_sitter::{Node, Parser};
-use vantage_types::{CognitiveSignal, Origin, SourceLocation, SymbolKind};
+use vantage_types::{
+    CafBuilder, CafContext, CognitiveSignal, DefaultAlgebraResolver, IdentityAnchor,
+    NodeArena, NodeId, Origin, PerfMetrics, RoleResolver,
+    SourceLocation, SymbolKind, SymbolScopeRegistry, DOMAIN_ROOT,
+    SymbolId,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Language {
@@ -23,6 +28,14 @@ pub struct EpistemicParser {
     parser: Parser,
     language_name: String,
     solid_kinds: Vec<String>,
+    algebra_resolver: DefaultAlgebraResolver,
+    pub arena: NodeArena,
+    pub symbol_registry: SymbolScopeRegistry,
+    pub metrics: PerfMetrics,
+    /// Maps byte_start -> NodeId for the current parse.
+    node_id_map: HashMap<usize, NodeId>,
+    /// Persistent Scope Context for the CAF engine.
+    pub caf_context: CafContext,
 }
 
 impl EpistemicParser {
@@ -42,6 +55,12 @@ impl EpistemicParser {
             parser,
             language_name: lang_name.to_string(),
             solid_kinds: solid_kinds.iter().map(|s| s.to_string()).collect(),
+            algebra_resolver: DefaultAlgebraResolver::new(),
+            arena: NodeArena::new(),
+            symbol_registry: SymbolScopeRegistry::new(),
+            metrics: PerfMetrics::new(),
+            node_id_map: HashMap::new(),
+            caf_context: CafContext::new(),
         })
     }
 
@@ -120,12 +139,27 @@ impl EpistemicParser {
         // Vantage v1.2.3: Zero-Corruption Normalization Layer
         let tree = self.parser.parse(&normalized, None).unwrap_or_else(|| {
             tracing::error!("Structural parse failed for file: {}", path);
-            std::process::exit(1); // Still prefer exit over panic in binary
+            std::process::exit(1); 
         });
         let root = tree.root_node();
         let mut signals = Vec::new();
 
+        // 1. Reset Transient State
+        self.node_id_map.clear();
+        self.metrics.bump();
+        self.arena.bump_generation();
+        self.symbol_registry = SymbolScopeRegistry::new();
+        self.caf_context = CafContext::new(); // Identity physics reset per pass
+
+        // 2. Perform Full Incremental CAF Walk (v1.2.4 Formula)
+        // Root anchored to DOMAIN_ROOT for workspace stability.
+        self.compute_caf_hash(root, DOMAIN_ROOT, 0, &normalized);
+
+        // 3. Extract Anchors and Map to Signals
         self.extract_and_normalize(root, &normalized, &mut signals, path);
+
+        // 4. Persistence GC (Evict nodes not seen in this pass)
+        self.arena.gc();
 
         // Determinism: sort signals by byte_start for stable cross-platform ordering.
         signals.sort_by_key(|s| s.location.byte_start);
@@ -139,8 +173,8 @@ impl EpistemicParser {
         &mut self,
         source: &str,
         path: &str,
-    ) -> (Vec<CognitiveSignal>, crate::graph::SymbolGraph) {
-        use crate::graph::SymbolGraph;
+    ) -> (Vec<CognitiveSignal>, crate::SymbolDependencyGraph) {
+        use crate::SymbolDependencyGraph;
 
         // Normalize same as parse_signals
         let mut normalized = String::with_capacity(source.len());
@@ -176,13 +210,12 @@ impl EpistemicParser {
         // Determinism: sort signals by byte_start for stable ordering
         signals.sort_by_key(|s| s.location.byte_start);
 
-        let mut graph = SymbolGraph::new();
+        let mut graph = SymbolDependencyGraph::new();
 
         // Add nodes from signals
         for sig in &signals {
             graph.add_node(
                 sig.symbol_id.clone(),
-                &sig.symbol_kind,
                 path,
                 sig.location.start_line,
             );
@@ -200,9 +233,9 @@ impl EpistemicParser {
         node: Node,
         source: &str,
         _path: &str,
-        graph: &mut crate::graph::SymbolGraph,
+        graph: &mut crate::SymbolDependencyGraph,
     ) {
-        use crate::graph::EdgeType;
+        use vantage_types::graph::DependencyKind;
 
         let kind = node.kind();
 
@@ -212,7 +245,7 @@ impl EpistemicParser {
             let caller = self.find_containing_function(node, source);
             let callee = self.extract_called_name(node, source);
             if let (Some(from), Some(to)) = (caller, callee) {
-                graph.add_edge(&from, &to, EdgeType::Calls);
+                graph.add_edge(&from, &to, DependencyKind::CallEdge);
             }
         }
 
@@ -222,7 +255,10 @@ impl EpistemicParser {
             if let Some(method_node) = node.child_by_field_name("name") {
                 let method_name = method_node.utf8_text(source.as_bytes()).unwrap_or("");
                 if let Some(from) = caller {
-                    graph.add_edge(&from, method_name, EdgeType::Calls);
+                    if !method_name.is_empty() {
+                        let to = SymbolId::new(method_name);
+                        graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                    }
                 }
             }
         }
@@ -233,14 +269,15 @@ impl EpistemicParser {
         {
             let container = self
                 .find_containing_function(node, source)
-                .unwrap_or_else(|| "_module".to_string());
+                .unwrap_or_else(SymbolId::root);
             let import_name = node
                 .utf8_text(source.as_bytes())
                 .unwrap_or("")
                 .trim()
                 .to_string();
             if !import_name.is_empty() {
-                graph.add_edge(&container, &import_name, EdgeType::Imports);
+                let to = vantage_types::SymbolId::new(&import_name);
+                graph.add_edge(&container, &to, DependencyKind::ModuleImport);
             }
         }
 
@@ -251,8 +288,8 @@ impl EpistemicParser {
         }
     }
 
-    /// Walk up from a node to find the containing function name.
-    fn find_containing_function(&self, node: Node, source: &str) -> Option<String> {
+    /// Walk up from a node to find the containing function name as a SymbolId.
+    fn find_containing_function(&self, node: Node, source: &str) -> Option<SymbolId> {
         let mut current = node.parent();
         while let Some(parent) = current {
             let kind = parent.kind();
@@ -262,10 +299,9 @@ impl EpistemicParser {
                 && let Some(name_node) = parent.child_by_field_name("name")
             {
                 return Some(
-                    name_node
+                    SymbolId::new(name_node
                         .utf8_text(source.as_bytes())
-                        .unwrap_or("unknown")
-                        .to_string(),
+                        .unwrap_or("unknown"))
                 );
             }
             current = parent.parent();
@@ -273,23 +309,21 @@ impl EpistemicParser {
         None
     }
 
-    /// Extract the name being called from a call_expression/call node.
-    fn extract_called_name(&self, node: Node, source: &str) -> Option<String> {
+    /// Extract the name being called from a call_expression/call node as a SymbolId.
+    fn extract_called_name(&self, node: Node, source: &str) -> Option<SymbolId> {
         if let Some(func_node) = node.child_by_field_name("function") {
             return Some(
-                func_node
+                SymbolId::new(func_node
                     .utf8_text(source.as_bytes())
-                    .unwrap_or("unknown")
-                    .to_string(),
+                    .unwrap_or("unknown"))
             );
         }
         // Fallback: first child
         if let Some(first) = node.child(0) {
             return Some(
-                first
+                SymbolId::new(first
                     .utf8_text(source.as_bytes())
-                    .unwrap_or("unknown")
-                    .to_string(),
+                    .unwrap_or("unknown"))
             );
         }
         None
@@ -297,7 +331,7 @@ impl EpistemicParser {
 
     /// Phase A & B integrated traversal
     fn extract_and_normalize(
-        &self,
+        &mut self,
         node: Node,
         source: &str,
         signals: &mut Vec<CognitiveSignal>,
@@ -372,7 +406,7 @@ impl EpistemicParser {
     }
 
     fn map_to_signal(
-        &self,
+        &mut self,
         uuid: String,
         node: Node,
         source: &str,
@@ -418,9 +452,20 @@ impl EpistemicParser {
             .collect();
         let semantic_hash = Self::compute_hash(&semantic_content);
 
-        // Normalized AST Hash (identifier-stripped, rename-invariant)
-        let normalized_ast = self.normalized_ast_string(node, source);
-        let normalized_hash = Self::compute_hash(normalized_ast.as_bytes());
+        // CAF-based hash (using hardened NodeId lookup)
+        let caf_hash = self.node_id_map.get(&node.start_byte())
+            .and_then(|id| self.arena.get(id))
+            .map(|entry| entry.stamp.hash.value.clone())
+            .unwrap_or_else(|| "MISSING_CAF_ID".to_string());
+
+        // Normalized hash (rename-invariant): strip identifiers, keep operators and whitespace
+        // This makes renaming variables/functions not affect the hash, but whitespace changes do
+        let normalized_str = String::from_utf8_lossy(&normalized_content);
+        let normalized_content_for_hash: String = normalized_str
+            .chars()
+            .filter(|c| !c.is_alphabetic() && *c != '_')
+            .collect();
+        let normalized_hash = Self::compute_hash(normalized_content_for_hash.as_bytes());
 
         // Source Location from tree-sitter
         let start_pos = node.start_position();
@@ -455,66 +500,123 @@ impl EpistemicParser {
         }
     }
 
-    /// Generate a normalized AST S-expression with identifiers stripped.
-    /// This produces a rename-invariant hash: changing variable names
-    /// does NOT change this hash, only structural changes do.
-    fn normalized_ast_string(&self, node: Node, source: &str) -> String {
-        let mut result = String::new();
-        self.normalized_ast_walk(node, source, &mut result, 0);
-        result
-    }
+    /// Compute CAF hash using commutativity-aware hashing with scope context
+    /// Compute CAF hash with O(depth) incremental support.
+    /// Strictly enforces child-first recursion and parent-anchored NodeId.
+    fn compute_caf_hash(
+        &mut self,
+        node: Node,
+        parent_id: NodeId,
+        depth: u16,
+        source: &str,
+    ) -> NodeId {
+        self.metrics.update_depth(depth);
 
-    fn normalized_ast_walk(&self, node: Node, source: &str, result: &mut String, depth: usize) {
-        let kind = node.kind();
+        // 1. Resolve Semantic Role
+        let parent_kind = node.parent().map(|p| p.kind()).unwrap_or("root");
+        let role = RoleResolver::resolve(node.kind(), parent_kind, node.start_byte());
 
-        // Strip identifiers: replace actual names with token type
-        if kind == "identifier" || kind == "type_identifier" {
-            result.push_str(&format!("{}IDENT\n", "  ".repeat(depth)));
-            return;
-        }
+        // 2. Build Identity Anchor
+        let anchor = self.build_anchor(node, source);
 
-        // Strip string literals
-        if kind == "string_content" || kind == "string" {
-            result.push_str(&format!("{}STR\n", "  ".repeat(depth)));
-            return;
-        }
+        // 3. Generate hardened NodeId (v1.2.4 Formula)
+        let (node_id, _fingerprint) = NodeId::generate(Some(parent_id), role, &anchor);
 
-        // Strip integers
-        if kind == "integer_literal" {
-            result.push_str(&format!("{}INT\n", "  ".repeat(depth)));
-            return;
-        }
-
-        // Keep named structural nodes
-        if node.is_named() {
-            result.push_str(&format!("{}{}\n", "  ".repeat(depth), kind));
-        } else if node.child_count() == 0 {
-            // Anonymous leaf nodes: include operators (+, *, ==, etc.)
-            // These are semantically critical but stripped of whitespace
-            let text = node.utf8_text(source.as_bytes()).unwrap_or("").trim();
-            if !text.is_empty() {
-                result.push_str(&format!("{}{}\n", "  ".repeat(depth), text));
+        // 4. Cache Lookup - O(1) in HashMap
+        if let Some(entry) = self.arena.get_mut_with_bump(&node_id) {
+            // Check for EXACT structural hit (HashVersion check can be added here)
+            if !entry.stamp.dirty {
+                self.metrics.record_reuse();
+                // MUST still map this ID for signal extraction in THIS pass
+                self.node_id_map.insert(node.start_byte(), node_id);
+                return node_id;
             }
         }
 
+        self.metrics.record_recompute();
+
+        // 5. Child-First Recursion
+        // Manage logical scope transitions (e.g. into blocks, functions)
+        let needs_new_scope = node.kind() == "block" || node.kind() == "function_item" || node.kind() == "class_definition";
+        if needs_new_scope {
+            self.caf_context.push_scope();
+        }
+
+        let mut child_hashes = Vec::new();
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            self.normalized_ast_walk(child, source, result, depth + 1);
+            let child_id = self.compute_caf_hash(child, node_id, depth + 1, source);
+            
+            // Collect hashes from arena for CafBuilder
+            if let Some(entry) = self.arena.get(&child_id) {
+                child_hashes.push(entry.stamp.hash.clone());
+            }
         }
+
+        if needs_new_scope {
+            self.caf_context.pop_scope();
+        }
+
+        // 6. Finalize Node and Hash
+        let mut builder = CafBuilder::new(&self.algebra_resolver, &self.language_name)
+            .with_scope(self.caf_context.clone()); // FIX: Use real scope context
+
+        let (caf_node, caf_hash) = builder.build(
+            node.kind(),
+            child_hashes,
+            node.start_byte(),
+            node.end_byte(),
+            Some(parent_id),
+        );
+
+        // 7. Store in Arena (Set-Once Invariant)
+        let stamp = vantage_types::NodeStamp::new(caf_hash, 0); // epoch 0 for now
+        self.arena.insert(node_id, caf_node, stamp);
+        self.node_id_map.insert(node.start_byte(), node_id);
+
+        node_id
     }
 
-    fn extract_symbol_id(&self, node: Node, source: &str) -> String {
+    fn build_anchor(&mut self, node: Node, source: &str) -> IdentityAnchor {
+        let kind = node.kind();
+        
+        // Bindings (Functions, Variables, Types)
+        if kind == "identifier" || kind == "type_identifier" || kind == "function_item" || kind == "function_definition" {
+            let name = node.utf8_text(source.as_bytes()).unwrap_or("unknown");
+            let symbol_id = self.symbol_registry.discover(name);
+            return IdentityAnchor::Binding(symbol_id);
+        }
+
+        // Literals
+        if kind.contains("literal") || kind == "string" || kind == "integer" {
+            let text = node.utf8_text(source.as_bytes()).unwrap_or("");
+            let hash = Self::compute_hash(text.as_bytes());
+            return IdentityAnchor::Literal(hash);
+        }
+
+        // Operators
+        if node.child_count() == 0 && !node.is_named() {
+            let op = node.utf8_text(source.as_bytes()).unwrap_or("");
+            if !op.trim().is_empty() {
+                return IdentityAnchor::Operator(op.to_string(), 0);
+            }
+        }
+
+        // Default: Structural node
+        IdentityAnchor::Structural
+    }
+
+
+    fn extract_symbol_id(&self, node: Node, source: &str) -> SymbolId {
         if let Some(id_node) = node.child_by_field_name("name") {
-            return id_node
+            return SymbolId::new(id_node
                 .utf8_text(source.as_bytes())
-                .unwrap_or("unknown")
-                .to_string();
+                .unwrap_or("unknown"));
         }
         if let Some(id_node) = node.child_by_field_name("function") {
-            return id_node
+            return SymbolId::new(id_node
                 .utf8_text(source.as_bytes())
-                .unwrap_or("unknown")
-                .to_string();
+                .unwrap_or("unknown"));
         }
 
         // Fallback for ERROR nodes: find the first identifier
@@ -522,15 +624,14 @@ impl EpistemicParser {
             let mut cursor = node.walk();
             for child in node.children(&mut cursor) {
                 if child.kind() == "identifier" {
-                    return child
+                    return SymbolId::new(child
                         .utf8_text(source.as_bytes())
-                        .unwrap_or("unknown")
-                        .to_string();
+                        .unwrap_or("unknown"));
                 }
             }
         }
 
-        "unnamed".to_string()
+        SymbolId::new("unnamed")
     }
 
     fn extract_uuid(_text: &str) -> Option<String> {

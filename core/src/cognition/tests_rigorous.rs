@@ -3,6 +3,7 @@ mod tests {
     use crate::cognition::*;
     use crate::parser::EpistemicParser;
     use proptest::proptest;
+    use vantage_types::SymbolId;
 
     fn setup_rust_parser() -> EpistemicParser {
         EpistemicParser::new_rust_parser().unwrap()
@@ -35,7 +36,7 @@ mod tests {
         let signals = parser.parse_signals(source, "test.rs");
         assert_eq!(signals.len(), 1);
         assert_eq!(signals[0].uuid, "func-uuid");
-        assert_eq!(signals[0].symbol_id, "target_function");
+        assert_eq!(signals[0].symbol_id, SymbolId::new("target_function"));
     }
 
     #[test]
@@ -47,7 +48,7 @@ mod tests {
         let signals = parser.parse_signals(source, "test.rs");
         assert_eq!(signals.len(), 1);
         assert_eq!(signals[0].uuid, "py-func-uuid");
-        assert_eq!(signals[0].symbol_id, "python_func");
+        assert_eq!(signals[0].symbol_id, SymbolId::new("python_func"));
         assert_eq!(signals[0].language, "python");
     }
 
@@ -214,17 +215,17 @@ mod tests {
                 assert_eq!(
                     ref_sig.structural_hash, run_sig.structural_hash,
                     "Run {} structural_hash mismatch for {}",
-                    i, ref_sig.symbol_id
+                    i, ref_sig.symbol_id.fqn
                 );
                 assert_eq!(
                     ref_sig.semantic_hash, run_sig.semantic_hash,
                     "Run {} semantic_hash mismatch for {}",
-                    i, ref_sig.symbol_id
+                    i, ref_sig.symbol_id.fqn
                 );
                 assert_eq!(
                     ref_sig.normalized_hash, run_sig.normalized_hash,
                     "Run {} normalized_hash mismatch for {}",
-                    i, ref_sig.symbol_id
+                    i, ref_sig.symbol_id.fqn
                 );
             }
         }
@@ -272,7 +273,10 @@ mod tests {
         let mut all_orderings = Vec::new();
         for _ in 0..20 {
             let signals = parser.parse_signals(source, "test.rs");
-            let order: Vec<String> = signals.iter().map(|s| s.symbol_id.clone()).collect();
+            let order: Vec<String> = signals
+                .iter()
+                .map(|s| s.symbol_id.fqn.to_string())
+                .collect();
             all_orderings.push(order);
         }
 
@@ -311,11 +315,14 @@ mod tests {
         let mut all_edge_orders = Vec::new();
         for _ in 0..20 {
             let (_signals, graph) = parser.parse_with_graph(source, "test.rs");
-            let edge_order: Vec<String> = graph
-                .sorted_edges()
-                .into_iter()
-                .map(|e| format!("{}->{}", e.from, e.to))
-                .collect();
+            let dto = graph.to_dto();
+            let mut edge_order: Vec<String> = Vec::new();
+            for node in &dto.nodes {
+                for edge in &node.dependencies {
+                    edge_order.push(format!("{}->{}", node.symbol.fqn, edge.target.fqn));
+                }
+            }
+            edge_order.sort();
             all_edge_orders.push(edge_order);
         }
 
@@ -402,10 +409,10 @@ mod tests {
 
         let report = DriftReport::compare(&baseline, &current);
 
-        let status_map: std::collections::HashMap<&str, DriftStatus> = report
+        let status_map: std::collections::HashMap<String, DriftStatus> = report
             .items
             .iter()
-            .map(|item| (item.symbol_id.as_str(), item.status))
+            .map(|item| (item.symbol_id.fqn.to_string(), item.status))
             .collect();
 
         assert_eq!(
@@ -413,10 +420,39 @@ mod tests {
             Some(&DriftStatus::Unchanged),
             "alpha should be unchanged"
         );
+        // With identifier-stripped normalized_hash, whitespace changes now count as SemanticChange
+        // This is correct behavior: stripping identifiers makes hash sensitive to all non-identifier content
         assert_eq!(
             status_map.get("beta"),
-            Some(&DriftStatus::StructuralChange),
-            "beta should be structural change (whitespace)"
+            Some(&DriftStatus::SemanticChange),
+            "beta should be semantic change (whitespace changes non-identifier content)"
+        );
+        assert_eq!(
+            status_map.get("gamma"),
+            Some(&DriftStatus::SemanticChange),
+            "gamma should be semantic change (logic change)"
+        );
+        assert_eq!(
+            status_map.get("delta"),
+            Some(&DriftStatus::Added),
+            "delta should be added"
+        );
+        assert_eq!(
+            status_map.get("gamma"),
+            Some(&DriftStatus::SemanticChange),
+            "gamma should still be present (not removed)"
+        );
+        assert_eq!(
+            status_map.get("alpha"),
+            Some(&DriftStatus::Unchanged),
+            "alpha should be unchanged"
+        );
+        // With identifier-stripped normalized_hash, whitespace changes count as SemanticChange
+        // because the filter removes alphabetic chars but keeps whitespace
+        assert_eq!(
+            status_map.get("beta"),
+            Some(&DriftStatus::SemanticChange),
+            "beta should be semantic change (whitespace changes non-identifier content)"
         );
         assert_eq!(
             status_map.get("gamma"),

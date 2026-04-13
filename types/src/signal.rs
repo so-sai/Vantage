@@ -1,11 +1,12 @@
 use crate::symbol::SymbolKind;
+use crate::symbol_id::SymbolId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CognitiveSignal {
     pub uuid: String,           // Epistemic identifier (@epistemic:<uuid>)
-    pub symbol_id: String,      // Stable identity (e.g., "core::parser::solve")
+    pub symbol_id: SymbolId,    // Stable identity (e.g., "core::parser::solve")
     pub parent: Option<String>, // Hierarchy parent UUID or name
     pub symbol_kind: SymbolKind,
     pub language: String,

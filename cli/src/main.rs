@@ -60,7 +60,27 @@ enum Commands {
     Purge {
         /// Force removal without confirmation
         #[arg(long)]
+        message: Option<String>,
+        #[arg(long)]
         force: bool,
+    },
+    /// Benchmark incremental performance on synthetic loads
+    Bench {
+        /// Number of iterations for timing
+        #[arg(long, default_value = "10")]
+        iterations: usize,
+    },
+    /// Introspect Vantage capabilities [EXPERIMENTAL]
+    Introspect {
+        /// List all capabilities
+        #[arg(long)]
+        list: bool,
+        /// Show detailed info for a specific capability
+        #[arg(long)]
+        capability: Option<String>,
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -85,7 +105,13 @@ fn main() -> Result<()> {
         Commands::Diff { path, seal, json } => dispatch::execute_diff(path, seal, json),
         Commands::Graph { path, json } => dispatch::execute_graph(path, json),
         Commands::Seal { path } => dispatch::execute_seal(path),
-        Commands::Purge { force } => dispatch::execute_purge(force),
+        Commands::Purge { message: _, force } => dispatch::execute_purge(force),
+        Commands::Bench { iterations } => dispatch::execute_bench(iterations),
+        Commands::Introspect {
+            list,
+            capability,
+            json,
+        } => dispatch::execute_introspect(list, capability, json),
     };
 
     if let Err(e) = result {

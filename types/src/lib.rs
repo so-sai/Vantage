@@ -1,14 +1,66 @@
-// @epistemic: VANTAGE_TYPES_CORE_V1
-// Description: Core type definitions for Vantage v1.2.3.
 // Policy: Structural integrity mandatory for No-GIL Python 3.14.3 compatibility.
 
+/// The Authoritative ABI Snapshot Seal for Vantage v1.2.4.
+/// This hash locks the V0 Protocol schema, SymbolId layout, and Registry semantics.
+/// Any drift in memory layout or binary encoding MUST trigger a forensic failure.
+pub const SYSTEM_ABI_HASH: &str = "7e0921a4f89d23c4e9e03d156b2c5b3d";
+
+pub mod arena;
+pub mod caf;
+pub mod collision;
+pub mod dirty_propagation;
+pub mod graph;
 pub mod hash;
+pub mod identity_anchor;
+pub mod incremental;
+pub mod invariant;
+pub mod node_id;
+pub mod node_stamp;
+pub mod role_resolver;
+pub mod semantic;
+pub mod semantic_role;
 pub mod signal;
 pub mod symbol;
+pub mod symbol_id;
+pub mod telemetry;
+pub mod version;
 
-pub use hash::{HashAlgorithm, SemanticHash, StructuralHash};
+pub mod introspection;
+pub mod introspection_registry;
+
+#[cfg(test)]
+mod introspection_tests;
+
+pub use introspection::{CapabilityDescriptor, VantageCapabilityRegistry, VantageIntrospect};
+pub use introspection_registry::CAPABILITY_REGISTRY;
+
+pub use arena::NodeArena;
+pub use caf::{CafBuilder, CafDiffReason, CafDiffResult, CafDiffer, CafHash, CafNode};
+pub use collision::NodeFingerprint;
+pub use dirty_propagation::DirtyPropagator;
+pub use graph::{DependencyEdge, DependencyKind, SymbolGraphDTO, SymbolNodeDTO, SymbolState};
+pub use hash::{HashAlgorithm, SemanticHash, StructuralHash, SymbolHash};
+pub use identity_anchor::IdentityAnchor;
+pub use incremental::{
+    CafCache, DirtyReason, DirtyRegion, EditKind, IncrementalCafBuilder, IncrementalState,
+    InputEdit,
+};
+pub use invariant::{
+    ChangeType, CrossLanguageVerifier, InvariantTestCase, InvariantType, InvariantVerifier,
+};
+pub use node_id::{NodeId, DOMAIN_ROOT};
+pub use node_stamp::NodeStamp;
+pub use role_resolver::RoleResolver;
+pub use semantic::{
+    AlgebraResolver, CafContext, Commutativity, CommutativityTable, DefaultAlgebraResolver,
+    ScopeContext, SemanticError, SemanticKind,
+};
+pub use semantic_role::SemanticRole;
 pub use signal::{CognitiveSignal, Origin, SourceLocation};
 pub use symbol::SymbolKind;
+pub use symbol_id::{interner, registry, SymbolId, SymbolRegistry, SymbolScopeRegistry};
+pub use telemetry::PerfMetrics;
+pub use version::HashVersion;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

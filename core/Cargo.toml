@@ -13,7 +13,6 @@ path = "src/bin/vantage-verify.rs"
 # Vantage is a specialized Structural Code & Config Sensor.
 # Office document support removed in v1.2.3 (Pruning Noise).
 thiserror = "1.0"
-uuid = { version = "1.0", features = ["v4"] }
 vantage-types = { path = "../types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -26,7 +25,6 @@ tree-sitter-python = "0.23"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 anyhow = "1.0"
-polars = { version = "0.52", default-features = false, features = ["lazy"] }
 
 [dev-dependencies]
 proptest = "1.0"

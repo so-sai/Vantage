@@ -1,5 +1,6 @@
 use crate::cognition::CognitiveSignal;
 use serde::{Deserialize, Serialize};
+use vantage_types::SymbolId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -13,7 +14,7 @@ pub enum DriftStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DriftItem {
-    pub symbol_id: String,
+    pub symbol_id: SymbolId,
     pub status: DriftStatus,
     pub old_hash: Option<String>,
     pub new_hash: Option<String>,
@@ -42,30 +43,33 @@ impl DriftReport {
         let mut added = 0;
         let mut removed = 0;
 
-        // Index baseline by symbol_id
-        let baseline_map: std::collections::HashMap<&str, &CognitiveSignal> =
-            baseline.iter().map(|s| (s.symbol_id.as_str(), s)).collect();
+        // Index baseline by SymbolId
+        let baseline_map: std::collections::HashMap<&SymbolId, &CognitiveSignal> =
+            baseline.iter().map(|s| (&s.symbol_id, s)).collect();
 
-        // Index current by symbol_id
-        let current_map: std::collections::HashMap<&str, &CognitiveSignal> =
-            current.iter().map(|s| (s.symbol_id.as_str(), s)).collect();
+        // Index current by SymbolId
+        let current_map: std::collections::HashMap<&SymbolId, &CognitiveSignal> =
+            current.iter().map(|s| (&s.symbol_id, s)).collect();
 
         // Check current signals against baseline
         for sig in current {
-            if let Some(baseline_sig) = baseline_map.get(sig.symbol_id.as_str()) {
+            if let Some(baseline_sig) = baseline_map.get(&sig.symbol_id) {
                 // Symbol exists in both - compare hashes
+                // Logic: normalized_hash catches logic changes, structural catches whitespace
                 let struct_changed = sig.structural_hash != baseline_sig.structural_hash;
                 let norm_changed = sig.normalized_hash != baseline_sig.normalized_hash;
 
-                let status = if !struct_changed && !norm_changed {
-                    unchanged += 1;
-                    DriftStatus::Unchanged
-                } else if norm_changed {
+                let status = if norm_changed {
+                    // Logic/semantic changed (identifiers, operators, etc.)
                     semantic_changes += 1;
                     DriftStatus::SemanticChange
-                } else {
+                } else if struct_changed {
+                    // Only structural/whitespace changed
                     structural_changes += 1;
                     DriftStatus::StructuralChange
+                } else {
+                    unchanged += 1;
+                    DriftStatus::Unchanged
                 };
 
                 items.push(DriftItem {
@@ -96,7 +100,7 @@ impl DriftReport {
 
         // Check for removed symbols
         for sig in baseline {
-            if !current_map.contains_key(sig.symbol_id.as_str()) {
+            if !current_map.contains_key(&sig.symbol_id) {
                 removed += 1;
                 items.push(DriftItem {
                     symbol_id: sig.symbol_id.clone(),

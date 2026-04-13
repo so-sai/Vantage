@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 # Core dependency
 vantage-core = { path = "../core" }
+vantage-types = { path = "../types" }
 
 # CLI parsing (Ultra-Lean: minimal features for zero-lag)
 clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }

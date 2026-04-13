@@ -4,13 +4,13 @@
 //! This module is currently a skeleton to satisfy the Elite Standards.
 
 use polars::prelude::*;
-use crate::graph::SymbolGraph;
+use crate::graph::SymbolDependencyGraph;
 use anyhow::Result;
 
 /// Process impact radius statistics using Polars LazyFrames.
 /// Currently a dummy implementation for v1.2.4 research cycle.
 #[tracing::instrument(skip(graph))]
-pub fn process_impact_radius_stats(graph: &SymbolGraph) -> Result<()> {
+pub fn process_impact_radius_stats(graph: &SymbolDependencyGraph) -> Result<()> {
     // Skeleton implementation: Create a placeholder DataFrame
     let s0 = Series::new("symbol".into(), &["vantage_core"]);
     let s1 = Series::new("reach".into(), &[graph.nodes.len() as u32]);
