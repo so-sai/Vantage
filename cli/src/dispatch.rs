@@ -393,18 +393,30 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             .map(|s| (s.normalized_hash.clone(), s))
             .collect();
 
-    let aligned_baseline: Vec<vantage_core::CognitiveSignal> = baseline_signals
-        .iter()
-        .map(|baseline| {
-            let mut b = baseline.clone();
-            if let Some(current) = current_by_norm.get(&baseline.normalized_hash) {
-                b.structural_hash = baseline.structural_hash.clone();
+    // Align baseline to current by matching normalized_hash
+    // If normalized_hash changed (e.g., due to logic update), still track the symbol
+    let mut aligned_baseline: Vec<vantage_core::CognitiveSignal> = Vec::new();
+
+    for baseline in &baseline_signals {
+        let mut b = baseline.clone();
+        if let Some(current) = current_by_norm.get(&baseline.normalized_hash) {
+            // Hash matches - use aligned data
+            b.structural_hash = baseline.structural_hash.clone();
+            b.location = current.location.clone();
+            b.symbol_id = current.symbol_id.clone();
+        } else {
+            // Hash differs (logic changed) - use current's location/symbol but keep baseline hash for comparison
+            // Find by symbol_id instead
+            if let Some(current) = current_result
+                .signals
+                .iter()
+                .find(|c| c.symbol_id == baseline.symbol_id)
+            {
                 b.location = current.location.clone();
-                b.symbol_id = current.symbol_id.clone();
             }
-            b
-        })
-        .collect();
+        }
+        aligned_baseline.push(b);
+    }
 
     let report = DriftReport::compare(&aligned_baseline, &current_result.signals);
 
@@ -423,9 +435,8 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
         println!("  Total symbols: {}", report.total_symbols);
         println!("  Unchanged:    {}", report.unchanged);
         println!("  Struct chg:  {}", report.structural_changes);
-        println!("  Semantic:    {}", report.semantic_changes);
-        println!("  Added:      {}", report.added);
-        println!("  Removed:    {}", report.removed);
+        println!("  Added:       {}", report.added);
+        println!("  Removed:     {}", report.removed);
 
         println!();
         println!("[*] Details:");
@@ -446,10 +457,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             );
         }
 
-        let has_changes = report.structural_changes > 0
-            || report.semantic_changes > 0
-            || report.added > 0
-            || report.removed > 0;
+        let has_changes = report.structural_changes > 0 || report.added > 0 || report.removed > 0;
         if has_changes {
             println!();
             println!("[!] DRIFT DETECTED");
@@ -607,8 +615,50 @@ impl Config {
     Ok(())
 }
 
-pub fn execute_introspect(list: bool, capability: Option<String>, use_json: bool) -> Result<()> {
+#[tracing::instrument(skip_all, fields(list, capability, envelope, limits))]
+pub fn execute_introspect(
+    list: bool,
+    capability: Option<String>,
+    use_json: bool,
+    envelope: bool,
+    limits: bool,
+) -> Result<()> {
     use vantage_core::CAPABILITY_REGISTRY;
+    use vantage_types::SystemEnvelope;
+
+    if envelope {
+        let env = SystemEnvelope::current();
+        if use_json {
+            println!("{}", serde_json::to_string_pretty(&env)?);
+        } else {
+            println!("{}", bold!(yellow!("📦 SYSTEM ENVELOPE")));
+            println!("  Version:           {}", env.version);
+            println!("  Safe Node Limit:   {}", env.safe_node_limit);
+            println!("  Nonlinear Boundary: {}", env.nonlinear_boundary);
+            println!("  Deterministic:     {}", env.deterministic);
+            println!("  Zero-Copy:         {}", env.zero_copy);
+            println!("  O(n log n) Guarantee: {}", env.o_n_log_n_guarantee);
+        }
+        return Ok(());
+    }
+
+    if limits {
+        let env = SystemEnvelope::current();
+        if use_json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({
+                    "safe_node_limit": env.safe_node_limit,
+                    "nonlinear_boundary": env.nonlinear_boundary,
+                }))?
+            );
+        } else {
+            println!("{}", bold!(yellow!("⚡ PERFORMANCE LIMITS")));
+            println!("  Safe Node Limit:   {}", env.safe_node_limit);
+            println!("  Nonlinear Boundary: {}", env.nonlinear_boundary);
+        }
+        return Ok(());
+    }
 
     if list {
         let entries = CAPABILITY_REGISTRY.list();

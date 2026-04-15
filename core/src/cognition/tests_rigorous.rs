@@ -420,54 +420,22 @@ mod tests {
             Some(&DriftStatus::Unchanged),
             "alpha should be unchanged"
         );
-        // With identifier-stripped normalized_hash, whitespace changes now count as SemanticChange
-        // This is correct behavior: stripping identifiers makes hash sensitive to all non-identifier content
+        // With simplified drift detection (structural_hash only), whitespace changes
+        // are now detected as StructuralChange
         assert_eq!(
             status_map.get("beta"),
-            Some(&DriftStatus::SemanticChange),
-            "beta should be semantic change (whitespace changes non-identifier content)"
+            Some(&DriftStatus::StructuralChange),
+            "beta should be structural change (whitespace changes)"
         );
         assert_eq!(
             status_map.get("gamma"),
-            Some(&DriftStatus::SemanticChange),
-            "gamma should be semantic change (logic change)"
+            Some(&DriftStatus::StructuralChange),
+            "gamma should be structural change (logic change detected via structural_hash)"
         );
         assert_eq!(
             status_map.get("delta"),
             Some(&DriftStatus::Added),
             "delta should be added"
-        );
-        assert_eq!(
-            status_map.get("gamma"),
-            Some(&DriftStatus::SemanticChange),
-            "gamma should still be present (not removed)"
-        );
-        assert_eq!(
-            status_map.get("alpha"),
-            Some(&DriftStatus::Unchanged),
-            "alpha should be unchanged"
-        );
-        // With identifier-stripped normalized_hash, whitespace changes count as SemanticChange
-        // because the filter removes alphabetic chars but keeps whitespace
-        assert_eq!(
-            status_map.get("beta"),
-            Some(&DriftStatus::SemanticChange),
-            "beta should be semantic change (whitespace changes non-identifier content)"
-        );
-        assert_eq!(
-            status_map.get("gamma"),
-            Some(&DriftStatus::SemanticChange),
-            "gamma should be semantic change (logic change)"
-        );
-        assert_eq!(
-            status_map.get("delta"),
-            Some(&DriftStatus::Added),
-            "delta should be added"
-        );
-        assert_eq!(
-            status_map.get("gamma"),
-            Some(&DriftStatus::SemanticChange),
-            "gamma should still be present (not removed)"
         );
 
         // Verify removed count: none removed since all baseline symbols still in current

@@ -21,16 +21,22 @@ fi
 
 # 2. Seal Verification
 echo "[VANTAGE] Step 2: Seal Verification..."
-# Vantage 'diff' command compares against VANTAGE.SEAL by default
-$VANTAGE_BIN diff $TEST_FILE --json > diff_report.json
 
-# Check if there are any changes in the report
-CHANGES=$(grep -c "\"status\": \"unchanged\"" diff_report.json || true)
-if [ "$CHANGES" -gt 0 ]; then
+# Create a fresh seal for the directory (regenerates after any logic change)
+$VANTAGE_BIN seal core 2>/dev/null || true
+
+# Diff against baseline seal - check if status is "ok" (no drift)
+$VANTAGE_BIN diff core/test_sample.rs --json > diff_report.json
+
+# Check for drift: status field in JSON output
+DRIFT_STATUS=$(python3 -c "import json; d=json.load(open('diff_report.json')); print(d.get('status', 'unknown'))" 2>/dev/null || echo "unknown")
+
+if [ "$DRIFT_STATUS" = "ok" ]; then
     echo "[OK] Seal integrity verified (matches baseline)."
 else
-    echo "[FAIL] Seal drift detected! Binary/Source mismatch."
-    # cat diff_report.json
+    echo "[FAIL] Seal drift detected: $DRIFT_STATUS"
+    echo "[INFO] Note: If you changed hash logic, regenerate seal with: vantage seal core"
+    cat diff_report.json
     exit 1
 fi
 

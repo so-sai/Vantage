@@ -1,0 +1,24 @@
+{
+  "map": [
+    {
+      "f": "test_sample.rs",
+      "h": "86002cbc8076c572ce99c18faed10fffc804a2e60622ee4ad7b6f3602aef349d",
+      "n": "51edfb6e6c75b8e6b7f3ab430b7119da79ff9165c00f734e8d851b1011c1f602",
+      "s": "test_function"
+    },
+    {
+      "f": "test_sample.rs",
+      "h": "3c906ca928d6971a14324a10b32c7245ca30e7420af91871d352c8c3b0b7af66",
+      "n": "0dd89ef3b00824cec6584a5e6cbd140a8bd22d2bdb78edc8741cfe3ce009851f",
+      "s": "TestStruct"
+    },
+    {
+      "f": "test_sample.rs",
+      "h": "6d8cf88736bc3b4f5f8cafd4d750f877d95772af08d2c8d9f327d93f8b717cca",
+      "n": "6a9e79c847e1e56ef2e6267b1e2d2b1c13df48a1d993322431cb0bece769fc84",
+      "s": "TEST_CONST"
+    }
+  ],
+  "ts": 1776236234,
+  "v": "1.2.4-ULTRA-LEAN"
+}

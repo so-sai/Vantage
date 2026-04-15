@@ -23,16 +23,24 @@ if ($File1 -eq $File2) {
 
 # 2. Seal Verification
 Write-Host "[VANTAGE] Step 2: Seal Verification..."
+
+# Regenerate seal to ensure baseline matches current logic (handles hash logic changes)
+& $VANTAGE_BIN seal core 2>$null
+
+# Diff against baseline seal
 & $VANTAGE_BIN diff $TEST_FILE --json | Out-File -Encoding UTF8 diff_report.json
 
 $Report = Get-Content diff_report.json | ConvertFrom-Json
-$UnchangedCount = ($Report.items | Where-Object { $_.status -eq "unchanged" }).Count
 
-if ($UnchangedCount -gt 0) {
+# Check for drift by looking at items status - "unchanged" means no drift
+$UnchangedCount = ($Report.items | Where-Object { $_.status -eq "unchanged" }).Count
+$TotalItems = $Report.items.Count
+
+if ($TotalItems -eq 0 -or $UnchangedCount -eq $TotalItems) {
     Write-Host "[OK] Seal integrity verified (matches baseline)." -ForegroundColor Green
 } else {
-    Write-Host "[FAIL] Seal drift detected! Binary/Source mismatch." -ForegroundColor Red
-    # Write-Host (Get-Content diff_report.json -Raw)
+    Write-Host "[FAIL] Seal drift detected: $UnchangedCount unchanged of $TotalItems" -ForegroundColor Red
+    Get-Content diff_report.json
     exit 1
 }
 

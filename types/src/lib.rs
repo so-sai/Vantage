@@ -31,7 +31,9 @@ pub mod introspection_registry;
 #[cfg(test)]
 mod introspection_tests;
 
-pub use introspection::{CapabilityDescriptor, VantageCapabilityRegistry, VantageIntrospect};
+pub use introspection::{
+    CapabilityDescriptor, SystemEnvelope, VantageCapabilityRegistry, VantageIntrospect,
+};
 pub use introspection_registry::CAPABILITY_REGISTRY;
 
 pub use arena::NodeArena;

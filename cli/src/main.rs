@@ -81,6 +81,12 @@ enum Commands {
         /// Output in JSON format
         #[arg(long)]
         json: bool,
+        /// Show system envelope (limits and invariants)
+        #[arg(long)]
+        envelope: bool,
+        /// Show performance limits
+        #[arg(long)]
+        limits: bool,
     },
 }
 
@@ -111,7 +117,9 @@ fn main() -> Result<()> {
             list,
             capability,
             json,
-        } => dispatch::execute_introspect(list, capability, json),
+            envelope,
+            limits,
+        } => dispatch::execute_introspect(list, capability, json, envelope, limits),
     };
 
     if let Err(e) = result {

@@ -1,8 +1,8 @@
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use tree_sitter::{Node, Parser};
-use vantage_types::{
-    CafBuilder, CafContext, CognitiveSignal, DefaultAlgebraResolver, IdentityAnchor,
+use vantage_types::semantic_role::SemanticRole;
+use vantage_types::{CafBuilder, CafContext, CognitiveSignal, DefaultAlgebraResolver, IdentityAnchor,
     NodeArena, NodeId, Origin, PerfMetrics, RoleResolver,
     SourceLocation, SymbolKind, SymbolScopeRegistry, DOMAIN_ROOT,
     SymbolId,
@@ -32,10 +32,9 @@ pub struct EpistemicParser {
     pub arena: NodeArena,
     pub symbol_registry: SymbolScopeRegistry,
     pub metrics: PerfMetrics,
-    /// Maps byte_start -> NodeId for the current parse.
     node_id_map: HashMap<usize, NodeId>,
-    /// Persistent Scope Context for the CAF engine.
     pub caf_context: CafContext,
+    solid_node_index: Vec<(usize, usize, u8)>,
 }
 
 impl EpistemicParser {
@@ -61,6 +60,7 @@ impl EpistemicParser {
             metrics: PerfMetrics::new(),
             node_id_map: HashMap::new(),
             caf_context: CafContext::new(),
+            solid_node_index: Vec::new(),
         })
     }
 
@@ -142,6 +142,10 @@ impl EpistemicParser {
             std::process::exit(1); 
         });
         let root = tree.root_node();
+        
+        // Build solid node index once (O(n)) for binary search lookup (O(log n) per tag)
+        self.build_solid_node_index(root);
+        
         let mut signals = Vec::new();
 
         // 1. Reset Transient State
@@ -204,6 +208,10 @@ impl EpistemicParser {
             std::process::exit(1);
         });
         let root = tree.root_node();
+        
+        // Build solid node index once (O(n)) for binary search lookup (O(log n) per tag)
+        self.build_solid_node_index(root);
+        
         let mut signals = Vec::new();
         self.extract_and_normalize(root, &normalized, &mut signals, path);
 
@@ -345,8 +353,9 @@ impl EpistemicParser {
             let text = node.utf8_text(source.as_bytes()).unwrap_or("");
             if let Some(uuid) = Self::extract_uuid(text) {
                 // Phase B: Normalization (Geometric Target -> Signal)
-                if let Some(target_node) = self.find_geometric_target(node, source) {
-                    let signal = self.map_to_signal(uuid, target_node, source, path);
+                if let Some((target_start, target_end, target_role)) = self.find_geometric_target(node, source) {
+                    let target_kind = Self::role_to_kind(target_role);
+                    let signal = self.map_to_signal_from_offset(uuid, target_start, target_end, &target_kind, source, path);
                     signals.push(signal);
                 }
             }
@@ -357,50 +366,189 @@ impl EpistemicParser {
         }
     }
 
-    pub fn find_geometric_target<'a>(&self, anchor: Node<'a>, _source: &str) -> Option<Node<'a>> {
-        let anchor_end = anchor.end_byte();
+    fn map_to_signal_from_offset(
+        &mut self,
+        uuid: String,
+        byte_start: usize,
+        byte_end: usize,
+        kind_str: &str,
+        source: &str,
+        file_path: &str,
+    ) -> CognitiveSignal {
+        let span = byte_start..byte_end;
+        let content = &source.as_bytes()[span.clone()];
 
-        let mut root = anchor;
-        while let Some(parent) = root.parent() {
-            root = parent;
+        // Determinism: normalize line endings (\r\n → \n) before hashing.
+        let normalized_content: Vec<u8> = {
+            let as_str = std::str::from_utf8(content).unwrap_or("");
+            as_str.replace("\r\n", "\n").replace('\r', "\n").into_bytes()
+        };
+
+        // Normalized Mapping
+        let symbol_kind = match self.language_name.as_str() {
+            "rust" => match kind_str {
+                "function_item" => SymbolKind::Function,
+                "struct_item" => SymbolKind::Struct,
+                "enum_item" => SymbolKind::Enum,
+                "trait_item" => SymbolKind::Trait,
+                "mod_item" => SymbolKind::Other("module".to_string()),
+                _ => SymbolKind::Other(kind_str.to_string()),
+            },
+            "python" => match kind_str {
+                "function_definition" | "async_function_definition" => SymbolKind::Function,
+                "class_definition" => SymbolKind::Class,
+                _ => SymbolKind::Other(kind_str.to_string()),
+            },
+            _ => SymbolKind::Other(kind_str.to_string()),
+        };
+
+        // Extract actual symbol name from source
+        let symbol_id = Self::extract_name_from_node(source, byte_start, byte_end, kind_str);
+        
+        let structural_hash = Self::compute_hash(&normalized_content);
+
+        // Semantic Hash
+        let semantic_content: Vec<u8> = normalized_content
+            .iter()
+            .filter(|&&b| !b.is_ascii_whitespace())
+            .cloned()
+            .collect();
+        let semantic_hash = Self::compute_hash(&semantic_content);
+
+        // CAF hash - use placeholder since we don't have node access
+        let caf_hash = "INDEXED_CAF".to_string();
+
+        // Normalized hash
+        let normalized_str = String::from_utf8_lossy(&normalized_content);
+        let normalized_content_for_hash: String = normalized_str
+            .chars()
+            .filter(|c| !c.is_alphabetic() && *c != '_')
+            .collect();
+        let normalized_hash = Self::compute_hash(normalized_content_for_hash.as_bytes());
+
+        // Calculate line/column from byte offset
+        let (start_line, start_col) = Self::byte_to_line_col(source, byte_start);
+        let (end_line, end_col) = Self::byte_to_line_col(source, byte_end);
+
+        let location = SourceLocation {
+            file: file_path.to_string(),
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+            byte_start,
+            byte_end,
+        };
+
+        CognitiveSignal {
+            uuid,
+            symbol_id,
+            parent: None,
+            symbol_kind,
+            language: self.language_name.clone(),
+            structural_hash,
+            semantic_hash,
+            normalized_hash,
+            signature: None,
+            location,
+            metadata: HashMap::new(),
+            origin: Origin {
+                parser: format!("tree-sitter-{}", self.language_name),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+            },
+            confidence: 1.0,
         }
-
-        self.find_first_solid_after_byte(root, anchor_end)
     }
 
-    fn find_first_solid_after_byte<'a>(&self, root: Node<'a>, offset: usize) -> Option<Node<'a>> {
-        let mut cursor = root.walk();
-
-        // We need to visit EVERY node in pre-order to find the first solid one that starts after offset.
-        // We use cursor for efficiency.
-        loop {
-            let node = cursor.node();
-
-            if node.start_byte() >= offset
-                && let Some(target) = self.as_solid_target(node)
-            {
-                return Some(target);
+    fn byte_to_line_col(source: &str, byte_offset: usize) -> (u32, u32) {
+        let mut line = 1u32;
+        let mut col = 1u32;
+        for (i, c) in source.char_indices() {
+            if i >= byte_offset {
+                break;
             }
-
-            if cursor.goto_first_child() {
-                continue;
-            }
-
-            loop {
-                if cursor.goto_next_sibling() {
-                    break;
-                }
-                if !cursor.goto_parent() {
-                    return None;
-                }
+            if c == '\n' {
+                line += 1;
+                col = 1;
+            } else {
+                col += 1;
             }
         }
+        (line, col)
+    }
+
+    pub fn find_geometric_target(&mut self, anchor: Node, _source: &str) -> Option<(usize, usize, u8)> {
+        let anchor_end = anchor.end_byte();
+        let result = self.find_first_solid_after_byte(anchor_end);
+        result
     }
 
     fn as_solid_target<'a>(&self, node: Node<'a>) -> Option<Node<'a>> {
         let kind = node.kind();
         if node.is_named() && self.solid_kinds.iter().any(|k| k == kind) {
             return Some(node);
+        }
+        None
+    }
+
+    fn build_solid_node_index(&mut self, root: Node) {
+        self.solid_node_index.clear();
+        self.collect_solid_nodes(root);
+        self.solid_node_index.sort_by_key(|(offset, _, _)| *offset);
+    }
+
+    fn collect_solid_nodes(&mut self, node: Node) {
+        if let Some(kind_str) = self.solid_kinds.iter().find(|k| *k == node.kind()) {
+            if node.is_named() {
+                let role = Self::kind_to_role(kind_str);
+                self.solid_node_index.push((
+                    node.start_byte(),
+                    node.end_byte(),
+                    role as u8,
+                ));
+            }
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.collect_solid_nodes(child);
+        }
+    }
+
+    fn kind_to_role(kind: &str) -> SemanticRole {
+        match kind {
+            "function_item" | "function_definition" | "async_function_definition" => SemanticRole::FunctionName,
+            "struct_item" => SemanticRole::SyntaxNode,
+            "enum_item" => SemanticRole::SyntaxNode,
+            "trait_item" => SemanticRole::SyntaxNode,
+            "impl_item" => SemanticRole::SyntaxNode,
+            "mod_item" => SemanticRole::ModuleItem,
+            "const_item" | "static_item" => SemanticRole::SymbolDeclaration,
+            "macro_invocation" => SemanticRole::SyntaxNode,
+            "expression_statement" => SemanticRole::Statement,
+            "call_expression" => SemanticRole::CallTarget,
+            _ => SemanticRole::SyntaxNode,
+        }
+    }
+
+    fn role_to_kind(role: u8) -> &'static str {
+        match role as u16 {
+            10 => "function_item",
+            999 => "syntax_node",
+            71 => "mod_item",
+            32 => "symbol_declaration",
+            21 => "statement",
+            41 => "call_expression",
+            _ => "unknown",
+        }
+    }
+
+    fn find_first_solid_after_byte(&self, offset: usize) -> Option<(usize, usize, u8)> {
+        // Find first node where start_byte > offset (next solid after anchor)
+        let idx = self.solid_node_index.partition_point(|(start, _, _)| *start <= offset);
+        
+        if idx < self.solid_node_index.len() {
+            let (start, end, role) = self.solid_node_index[idx];
+            return Some((start, end, role));
         }
         None
     }
@@ -632,6 +780,53 @@ impl EpistemicParser {
         }
 
         SymbolId::new("unnamed")
+    }
+
+    fn extract_name_from_node(source: &str, byte_start: usize, byte_end: usize, kind: &str) -> SymbolId {
+        // For solid nodes we found via index, we have the exact byte range
+        // Extract the name by looking for identifier after the keyword
+        let node_content = &source[byte_start..byte_end];
+        
+        // Skip keywords like "fn", "struct", "enum", etc. and find the actual name
+        // These keywords are followed by whitespace then the name
+        let content_chars: Vec<char> = node_content.chars().collect();
+        
+        let mut i = 0;
+        // Skip the keyword
+        while i < content_chars.len() {
+            let c = content_chars[i];
+            if c.is_whitespace() {
+                break;
+            }
+            i += 1;
+        }
+        
+        // Skip whitespace
+        while i < content_chars.len() && content_chars[i].is_whitespace() {
+            i += 1;
+        }
+        
+        // Now we should be at the identifier
+        let name_start = i;
+        while i < content_chars.len() {
+            let c = content_chars[i];
+            if !c.is_alphanumeric() && c != '_' {
+                break;
+            }
+            i += 1;
+        }
+        
+        let name_end = i;
+        
+        if name_end > name_start {
+            let name = &node_content[name_start..name_end];
+            if !name.is_empty() && (name.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false) || name.starts_with('_')) {
+                return SymbolId::new(name);
+            }
+        }
+        
+        // Fallback: use kind
+        SymbolId::new(kind)
     }
 
     fn extract_uuid(_text: &str) -> Option<String> {
