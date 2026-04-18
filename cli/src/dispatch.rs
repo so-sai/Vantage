@@ -4,7 +4,10 @@
 //! Pipeline: signal → claim → invariant → decision.
 
 use crate::term::*;
+use serde::Serialize;
+
 use anyhow::{Context, Result};
+
 use ignore::WalkBuilder;
 use serde_json::json;
 use std::path::PathBuf;
@@ -732,6 +735,89 @@ pub fn execute_introspect(
         }
         std::process::exit(1);
     }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all, fields(path = %path.display(), json, deep))]
+pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
+    use crate::kit_integration::{verify_kit_memory, verify_deep, KitVerificationResult, DeepVerificationResult};
+
+    if deep {
+        let result = verify_kit_memory(&path)?;
+        let deep_result = verify_deep(&path)?;
+
+        if use_json {
+            #[derive(Serialize)]
+            struct DeepOutput {
+                basic: KitVerificationResult,
+                deep: DeepVerificationResult,
+            }
+            let output = DeepOutput {
+                basic: result.clone(),
+                deep: deep_result.clone(),
+            };
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        } else {
+            println!("Records scanned: {}", result.records_scanned);
+            println!();
+            println!("{}", bold!("Deep Verification:"));
+            println!("  Hash integrity:    {}", if result.integrity_ok { green!("OK") } else { red!("FAIL") });
+            println!("  Orphan nodes:   {}", if deep_result.orphan_count == 0 { green!("OK") } else { red!(deep_result.orphan_count.to_string()) });
+            println!("  Index check:    {}", if deep_result.index_ok { green!("OK") } else { red!("MISSING") });
+            println!("  SQLite health:   {}", if deep_result.sqlite_health { green!("OK") } else { red!("FAIL") });
+            println!();
+
+            let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
+            if overall_ok {
+                println!("{}", bold!(green!("✅ Overall: SAFE")));
+            } else {
+                println!("{}", bold!(red!("❌ Overall: UNSAFE")));
+            }
+        }
+
+        let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
+        std::process::exit(if overall_ok { 0 } else { 2 });
+    } else {
+        let result = verify_kit_memory(&path)?;
+
+        if use_json {
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        } else {
+            if result.integrity_ok {
+                println!("{}", bold!(green!("✅ INTEGRITY OK")));
+            } else {
+                println!("{}", bold!(red!("❌ INTEGRITY FAIL")));
+            }
+            println!("  Records scanned: {}", result.records_scanned);
+            println!("  Valid hashes:   {}", result.valid_hashes);
+            println!("  Invalid hashes: {}", result.invalid_hashes);
+            if !result.errors.is_empty() {
+                println!("\n{}", bold!(red!("Errors:")));
+                for err in result.errors.iter().take(5) {
+                    println!("  - {}", err);
+                }
+            }
+        }
+
+        if !result.integrity_ok {
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all, fields(path = %path.display()))]
+pub fn execute_benchmark(path: &PathBuf) -> Result<()> {
+    use crate::kit_integration::{benchmark, BenchmarkResult};
+
+    let result = benchmark(path)?;
+
+    println!("{}", bold!("Benchmark Results:"));
+    println!("  Records:      {}", result.records);
+    println!("  Time:         {:.2} ms", result.time_ms);
+    println!("  Speed:        {:.0} records/sec", result.records_per_sec);
 
     Ok(())
 }

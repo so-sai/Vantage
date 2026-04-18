@@ -5,7 +5,7 @@ edition = "2024"
 description = "CLI Adapter for Vantage Cognitive Artifact Factory"
 
 [[bin]]
-name = "vantage"
+name = "kit-vantage"
 path = "src/main.rs"
 
 [dependencies]
@@ -29,6 +29,10 @@ serde_json = "1.0"
 
 # High-performance directory walking
 ignore = "0.4"
+
+# SQLite read-only (Kit integration)
+rusqlite = { version = "0.31", features = ["bundled"] }
+sha2 = "0.10"
 
 [dev-dependencies]
 assert_cmd = "2.0"

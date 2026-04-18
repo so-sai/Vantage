@@ -4,6 +4,7 @@
 //! Supports signal → claim → invariant → decision enforcement.
 
 mod dispatch;
+mod kit_integration;
 mod term;
 
 use anyhow::Result;
@@ -11,7 +12,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "vantage")]
+#[command(name = "kit-vantage")]
 #[command(version = "1.2.4-ULTRA-LEAN")]
 #[command(about = "Vantage Structural Sensor - [ZERO-LAG] CPU-bound forensic extraction", long_about = None)]
 struct Cli {
@@ -88,6 +89,24 @@ enum Commands {
         #[arg(long)]
         limits: bool,
     },
+/// Verify Kit memory integrity (read .kit SQLite)
+    VerifyMemory {
+        /// Path to .kit directory (defaults to .kit)
+        #[arg(long, default_value = ".kit")]
+        path: PathBuf,
+        /// Output in JSON format
+        #[arg(long, short = 'j')]
+        json: bool,
+        /// Deep verification (hash + orphan + index + sqlite health)
+        #[arg(long, short = 'd')]
+        deep: bool,
+    },
+    /// Benchmark verification performance
+    Benchmark {
+        /// Path to .kit directory (defaults to .kit)
+        #[arg(long, default_value = ".kit")]
+        path: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -120,6 +139,8 @@ fn main() -> Result<()> {
             envelope,
             limits,
         } => dispatch::execute_introspect(list, capability, json, envelope, limits),
+        Commands::VerifyMemory { path, json, deep } => dispatch::execute_verify(path, json, deep),
+        Commands::Benchmark { path } => dispatch::execute_benchmark(&path),
     };
 
     if let Err(e) = result {
