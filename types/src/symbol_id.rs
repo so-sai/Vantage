@@ -19,7 +19,7 @@ pub fn interner() -> &'static SymbolRegistry {
 
 /// ABI Lock for canonicalization rules.
 /// Change this hash if logic in `canonicalize()` is modified.
-const CANON_HASH: u64 = 0xDEADC0DE_1234_5678;
+const CANON_HASH: u64 = 0xDEAD_C0DE_1234_5678;
 
 /// Forensic-grade Symbol Registry (L0 Identity Layer)
 /// Maps FQN strings to numeric indices and ensures cross-session epoch stability.
@@ -32,6 +32,12 @@ pub struct SymbolRegistry {
     epoch: u32,
     /// ABI Lock for canonicalization integrity
     canon_hash: u64,
+}
+
+impl Default for SymbolRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SymbolRegistry {
@@ -59,6 +65,10 @@ impl SymbolRegistry {
     pub fn len(&self) -> usize {
         let lock = self.id_to_name.lock().expect("Registry poisoned");
         lock.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn intern(&self, raw_fqn: &str) -> SymbolId {
@@ -197,10 +207,8 @@ impl SymbolScopeRegistry {
     }
 
     pub fn discover(&mut self, name: &str) -> SymbolId {
-        if let Some(scope) = self.scopes.last() {
-            if let Some(id) = scope.get(name) {
-                return id.clone();
-            }
+        if let Some(id) = self.scopes.last().and_then(|s| s.get(name)) {
+            return id.clone();
         }
 
         let id = SymbolId::new(name);

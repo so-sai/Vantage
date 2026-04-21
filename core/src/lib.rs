@@ -13,6 +13,7 @@ pub mod graph;
 pub mod intent;
 pub mod parser;
 pub mod tirl;
+pub mod extractor;
 
 // Active exports (used by CLI + pipeline)
 pub use cognition::{

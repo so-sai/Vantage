@@ -1,54 +1,108 @@
 {
   "map": [
     {
+      "f": "core\\tests\\boundary_suite.rs",
+      "h": "a3ad2774b57d38f251b63a90567c8c2c4e936ff3433da70c3d6b8f7c95fff291",
+      "n": "19d8212bc62f9eee6077e93c4eb6dc3fd03e60b4ecdd6c9f2a89f6e08f96149f",
+      "s": "tests"
+    },
+    {
+      "f": "core\\tests\\boundary_suite.rs",
+      "h": "a3ad2774b57d38f251b63a90567c8c2c4e936ff3433da70c3d6b8f7c95fff291",
+      "n": "19d8212bc62f9eee6077e93c4eb6dc3fd03e60b4ecdd6c9f2a89f6e08f96149f",
+      "s": "tests"
+    },
+    {
+      "f": "core\\tests\\boundary_suite.rs",
+      "h": "5ad3441c420f33e472b8a3b0acc5505b2b5f7aa32ea542bb1d7d41908173ec38",
+      "n": "315c79a0fd843426a9dafad3fe5c1659cd98cec49870d9fed1abf97cfaf30521",
+      "s": "call_expression"
+    },
+    {
+      "f": "core\\tests\\edge_audit.rs",
+      "h": "450b53001227885e0eb3325e40dbca400aadd6ecefcaa09fd82bfe73fbfa284a",
+      "n": "24f3e5f41360936fc2f2eaac54ee523d120da61c36c176b38de31e8cd651acb2",
+      "s": "unknown"
+    },
+    {
       "f": "core\\test_sample.rs",
       "h": "86002cbc8076c572ce99c18faed10fffc804a2e60622ee4ad7b6f3602aef349d",
-      "n": "8b533d1e53ea6c6498c9dfe36e8e343aa9df684585352d17426e239c9e73078b",
+      "n": "51edfb6e6c75b8e6b7f3ab430b7119da79ff9165c00f734e8d851b1011c1f602",
       "s": "test_function"
     },
     {
       "f": "core\\test_sample.rs",
       "h": "3c906ca928d6971a14324a10b32c7245ca30e7420af91871d352c8c3b0b7af66",
-      "n": "04e5dedb018a44c83a77cf2160d093ee99a3346ded0e7877f12c4c01544a5073",
+      "n": "0dd89ef3b00824cec6584a5e6cbd140a8bd22d2bdb78edc8741cfe3ce009851f",
       "s": "TestStruct"
     },
     {
       "f": "core\\test_sample.rs",
       "h": "6d8cf88736bc3b4f5f8cafd4d750f877d95772af08d2c8d9f327d93f8b717cca",
-      "n": "912a4dac66f45a77f379fd27e381a8bd71e217571501a2c04cbf82c7ea1a6b7d",
+      "n": "6a9e79c847e1e56ef2e6267b1e2d2b1c13df48a1d993322431cb0bece769fc84",
       "s": "TEST_CONST"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "c93802327a6e4ece06f416acd9643252b131a5e53c2dd4c55549e2b23d4aa804",
+      "n": "c11504efcaa4ba9098bf7390b9235fead76a22fba792673d654a9088222d3766",
+      "s": "parser"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "b7c3b8c0bcc120b2e14be1594a54a368783c9e2f4ace2d15036fdc3eff68120a",
+      "n": "6983efff892a4d12327ee99a758aa67b3b6a06bf86836a1c930d852e4fc799d6",
+      "s": "cognition"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "a86fd4377cc1055415a4ad280bfe97c6c93e0be128a509bce3fb1e7d3077ac3b",
+      "n": "e6fe9e7925104bac3f7276167a099c2f22fd4ad365072454c4aae414787f1818",
+      "s": "graph"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "cc7ee768a5ba800c6bdbfd08837b9b912f3c1a99639a117e433fa944d309ee57",
+      "n": "acfdb7799b1aaf6d881b04393e93aa634d3aaabd7118a09e513e8518c40b2adb",
+      "s": "intent"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "de940874fd549b640dc707a8d8a42ee865cb4e30d7fd651fe97a2cd4786d4131",
+      "n": "d4007e8ed24bf46a63043015c1c74b36ce0f41889fa203543fde863354a42e91",
+      "s": "main"
+    },
+    {
+      "f": "core\\v1_2_4_seal.rs",
+      "h": "de940874fd549b640dc707a8d8a42ee865cb4e30d7fd651fe97a2cd4786d4131",
+      "n": "d4007e8ed24bf46a63043015c1c74b36ce0f41889fa203543fde863354a42e91",
+      "s": "main"
     },
     {
       "f": "examples\\python\\simple.py",
       "h": "d4075ab65055854d58df557d3c189a3d1f0fa3bba9d9c6343936db7877d1fb89",
-      "n": "b02d104ca15342e136312cf39148db2e576d9c3e04d63f1ec4eaac05364d000d",
+      "n": "4d258ea8df40ccae34fb5bc53db24870671209f62673d20ec1ecca94f1e764ea",
       "s": "process_data"
     },
     {
       "f": "examples\\rust\\simple.rs",
-      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
-      "n": "4fe89650e1266a5dafa55df4e5aa8c12183ce6b6bdced0294b45c4537a2fe704",
-      "s": "solve"
+      "h": "e8f18fb1a6d75abb0fa3d9d8e699780abb60cf0bed6233e7639f2ea908cb3555",
+      "n": "52645d79940fc27aadc797c51238f195e1022c483bf5e3aef0f504688b54d65e",
+      "s": "main"
     },
     {
       "f": "examples\\rust\\simple.rs",
-      "h": "d59b0daf97428d4b896448a0df5a2626d6d382a6a203fffffbe04e646808508c",
-      "n": "4fe89650e1266a5dafa55df4e5aa8c12183ce6b6bdced0294b45c4537a2fe704",
-      "s": "solve"
-    },
-    {
-      "f": "types\\src\\lib.rs",
-      "h": "484fa0744ca46d9e67b4cf0217570cd3ef0d51cc90952e390140b22b8cb9b5aa",
-      "n": "b77e325e73a836f95e9d6444192afd3aef858418eb2914042a7cf56f078e26c9",
-      "s": "hash"
+      "h": "e8f18fb1a6d75abb0fa3d9d8e699780abb60cf0bed6233e7639f2ea908cb3555",
+      "n": "52645d79940fc27aadc797c51238f195e1022c483bf5e3aef0f504688b54d65e",
+      "s": "main"
     },
     {
       "f": "types\\src\\signal.rs",
       "h": "877e6a835959932955bd3294b1b2910bf20aa9580e345203d534a1982f37f513",
-      "n": "47b270530bd79bc0ad1fa00f7bd37e588728026de4c36db68d4630bda525c376",
-      "s": "SourceLocation"
+      "n": "a63b84ebb181f3b76ae4c0511c95db0001b1b467ef03ebe11a955d8ffb26aa1d",
+      "s": "struct"
     }
   ],
-  "ts": 1776009853,
+  "ts": 1776767282,
   "v": "1.2.4-ULTRA-LEAN"
 }

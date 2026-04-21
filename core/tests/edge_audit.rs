@@ -5,7 +5,6 @@
 
 use std::time::Instant;
 use vantage_core::parser::EpistemicParser;
-use vantage_types::SymbolGraphDTO;
 
 fn make_functions(count: usize) -> String {
     let mut source = String::new();
@@ -115,7 +114,7 @@ mod anchor_cost {
 mod graph_edge_cost {
     use super::*;
 
-    fn make_call_graph(depth: usize, width: usize) -> String {
+    fn make_call_graph(_depth: usize, width: usize) -> String {
         let mut source = String::new();
 
         // Root calls all width functions

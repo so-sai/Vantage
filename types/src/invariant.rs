@@ -153,9 +153,9 @@ impl CrossLanguageVerifier {
     fn extract_functions(&self, code: &str, language: &str) -> Vec<String> {
         let mut funcs = Vec::new();
         for line in code.lines() {
-            if language == "rust" && line.contains("fn ") {
-                funcs.push(line.trim().to_string());
-            } else if language == "python" && line.contains("def ") {
+            if (language == "rust" && line.contains("fn "))
+                || (language == "python" && line.contains("def "))
+            {
                 funcs.push(line.trim().to_string());
             }
         }

@@ -219,7 +219,7 @@ mod tests {
             &self,
             node_kind: &str,
             language: &str,
-            context: &ScopeContext,
+            _context: &ScopeContext,
         ) -> Commutativity {
             if language == "rust" {
                 self.table.get_rust(node_kind)

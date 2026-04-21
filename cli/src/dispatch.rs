@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 
 use ignore::WalkBuilder;
 use serde_json::json;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 use vantage_core::cognition::{ClaimType, Decision, InvariantRule, Pipeline};
 use vantage_core::parser::Language;
@@ -119,7 +119,7 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
             println!(
                 "  - [{:?}] {} :: {}",
                 sig.symbol_kind,
-                sig.symbol_id.to_string(),
+                sig.symbol_id,
                 &sig.structural_hash[..8]
             );
         }
@@ -454,7 +454,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             println!(
                 "  [{}] {} @ {} - {}",
                 status_str,
-                item.symbol_id.to_string(),
+                item.symbol_id,
                 item.location,
                 desc
             );
@@ -809,8 +809,8 @@ pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
 }
 
 #[tracing::instrument(skip_all, fields(path = %path.display()))]
-pub fn execute_benchmark(path: &PathBuf) -> Result<()> {
-    use crate::kit_integration::{benchmark, BenchmarkResult};
+pub fn execute_benchmark(path: &Path) -> Result<()> {
+    use crate::kit_integration::benchmark;
 
     let result = benchmark(path)?;
 
@@ -820,4 +820,10 @@ pub fn execute_benchmark(path: &PathBuf) -> Result<()> {
     println!("  Speed:        {:.0} records/sec", result.records_per_sec);
 
     Ok(())
+}
+
+/// Execute dependency edges extraction
+#[tracing::instrument(skip(path))]
+pub fn execute_extract_edges(path: PathBuf) -> Result<()> {
+    vantage_core::extractor::pipeline::run(&path)
 }

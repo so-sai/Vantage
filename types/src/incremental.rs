@@ -64,18 +64,13 @@ pub struct DirtyRegion {
     pub reason: DirtyReason,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum DirtyReason {
+    #[default]
     DirectEdit,
     AncestorChanged,
     ScopeModified,
     CommutativityChanged,
-}
-
-impl Default for DirtyReason {
-    fn default() -> Self {
-        DirtyReason::DirectEdit
-    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -89,6 +84,12 @@ pub struct IncrementalState {
 pub struct IncrementalCafBuilder {
     state: IncrementalState,
     edits: Vec<InputEdit>,
+}
+
+impl Default for IncrementalCafBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl IncrementalCafBuilder {
@@ -235,8 +236,8 @@ impl CafCache {
 
     pub fn insert(&mut self, node_id: String, node: CafNode, hash: CafHash) {
         self.hash_index
-            .entry(hash.clone())
-            .or_insert_with(Vec::new)
+            .entry(hash)
+            .or_default()
             .push(node_id.clone());
         self.node_map.insert(node_id, node);
     }

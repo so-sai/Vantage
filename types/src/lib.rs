@@ -25,6 +25,7 @@ pub mod symbol_id;
 pub mod telemetry;
 pub mod version;
 
+pub mod edge;
 pub mod introspection;
 pub mod introspection_registry;
 
@@ -63,6 +64,7 @@ pub use symbol::SymbolKind;
 pub use symbol_id::{interner, registry, SymbolId, SymbolRegistry, SymbolScopeRegistry};
 pub use telemetry::PerfMetrics;
 pub use version::HashVersion;
+pub use edge::EdgeEvent;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

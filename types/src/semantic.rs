@@ -120,10 +120,8 @@ pub struct CafContext {
 
 impl CafContext {
     pub fn new() -> Self {
-        let mut scopes = Vec::new();
-        scopes.push(HashMap::new());
         Self {
-            scopes,
+            scopes: vec![HashMap::new()],
             var_counter: 0,
             func_counter: 0,
             type_counter: 0,

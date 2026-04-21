@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[repr(u16)]
 pub enum SemanticRole {
     Root = 0,
@@ -44,11 +44,6 @@ pub enum SemanticRole {
     ModuleItem = 71,
 
     // Fallback
+    #[default]
     SyntaxNode = 999,
-}
-
-impl Default for SemanticRole {
-    fn default() -> Self {
-        SemanticRole::SyntaxNode
-    }
 }

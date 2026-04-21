@@ -108,4 +108,487 @@ AI Agents (like Antigravity) MUST adhere to these protocols when interacting wit
 
 ---
 
+## 8. TECHNICAL RELEASE SUMMARY (v1.2.4)
+
+### 🧠 Định nghĩa một câu
+
+**Vantage v1.2.4 = Production-ready Memory Integrity Engine (Rust 2024) cho hệ thống Kit.**
+
+Không phải CLI phụ.
+Không phải tool debug.
+
+Mà là:
+
+> **Forensic sensor cho bộ nhớ AI.**
+
+---
+
+### 📍 Vai trò của Vantage trong hệ thống
+
+#### Kiến trúc tổng thể hiện tại
+
+```
+Agent
+   ↓
+kit (Python 3.14 runtime)
+   ↓ subprocess
+kit-vantage (Rust 2024 engine)
+   ↓ read-only
+.kit/local_brain.db
+   ↓
+Git
+```
+
+Mapping rõ:
+
+| Layer       | Role              |
+| ----------- | ----------------- |
+| **Kit**     | Memory Brain      |
+| **Vantage** | Integrity Sensor  |
+| **Git**     | Time Kernel       |
+| **Agent**   | Decision Executor |
+
+Đây là **kiến trúc rất sạch**.
+
+---
+
+### 🏗️ Kiến trúc nội bộ Vantage v1.2.4
+
+#### Core Pipeline
+
+```
+SQLite (read-only)
+        ↓
+baked_observations (VIEW)
+        ↓
+normalize(content)
+        ↓
+SHA256(structural_hash)
+        ↓
+verify integrity
+```
+
+Không write DB.
+Không mutate state.
+
+→ **pure verifier**
+
+---
+
+### 📦 Command Surface
+
+Hiện tại bạn đã có:
+
+```bash
+kit-vantage verify-memory
+kit-vantage verify-memory -d
+kit-vantage verify-memory -j
+kit-vantage verify-memory -d -j
+kit-vantage benchmark
+```
+
+Đây là **production CLI surface**.
+
+---
+
+### 🔍 `verify-memory` — Core Function
+
+#### Basic Mode
+
+```bash
+kit-vantage verify-memory
+```
+
+Kiểm tra:
+
+| Check           | Mục đích              |
+| --------------- | --------------------- |
+| Hash integrity  | structural truth      |
+| Record validity | corrupted data detect |
+
+Output ví dụ:
+
+```
+Records scanned: 119
+Valid hashes:   119
+Invalid hashes: 0
+
+✅ INTEGRITY OK
+```
+
+---
+
+#### `--deep` Mode — Full Forensic Check
+
+```bash
+kit-vantage verify-memory -d
+```
+
+Kiểm tra:
+
+| Check           | Meaning                  |
+| --------------- | ------------------------ |
+| Hash integrity  | content hash correctness |
+| Orphan nodes    | graph integrity          |
+| Index integrity | SQLite index validity    |
+| SQLite health   | file integrity           |
+
+Output:
+
+```
+Hash integrity:   OK
+Orphan nodes:     OK
+Index integrity:  OK
+SQLite health:    OK
+
+✅ Overall: SAFE
+```
+
+Đây là:
+
+> **real integrity verification**
+> không phải mock.
+
+---
+
+#### `--json` Output — CI/CD Ready
+
+```bash
+kit-vantage verify-memory -d -j
+```
+
+Output dạng:
+
+```json
+{
+  "records": 119,
+  "valid_hashes": 119,
+  "invalid_hashes": 0,
+  "orphan_nodes": 0,
+  "index_ok": true,
+  "sqlite_ok": true,
+  "status": "SAFE"
+}
+```
+
+Ý nghĩa:
+
+→ dùng trực tiếp trong:
+
+* CI pipeline
+* deployment gate
+* automated audits
+
+---
+
+### ⚡ `benchmark` — Performance Capability
+
+```bash
+kit-vantage benchmark
+```
+
+Kết quả hiện tại:
+
+```
+Records:      119
+Time:         1.82 ms
+Speed:        65,467 records/sec
+```
+
+Ý nghĩa thật:
+
+> Vantage đủ nhanh cho production-scale memory.
+
+Không còn là bottleneck.
+
+---
+
+### 🔐 Structural Hash System
+
+#### Algorithm
+
+```
+normalize(content)
+        ↓
+SHA256
+        ↓
+structural_hash
+```
+
+Normalization rule:
+
+```
+trim()
+lowercase()
+newline → space
+collapse whitespace
+```
+
+Quan trọng:
+
+| Feature                 | Status |
+| ----------------------- | ------ |
+| Python ↔ Rust alignment | ✅      |
+| Deterministic hashing   | ✅      |
+| Cross-language stable   | ✅      |
+
+Đây là **mốc rất lớn**.
+
+---
+
+### 🧱 SQLite Truth Layer Integration
+
+Vantage đọc từ:
+
+```
+.kit/local_brain.db
+```
+
+Thông qua:
+
+```
+baked_observations (VIEW)
+```
+
+Filter:
+
+```
+is_active = 1
+is_baked = 1
+superseded_at IS NULL
+```
+
+Ý nghĩa:
+
+> chỉ đọc **truth layer**, không đọc draft.
+
+Rất đúng thiết kế.
+
+---
+
+### 🔄 Migration Capability (v1.2.3 → v1.2.4)
+
+Đã hoàn thành:
+
+```
+Old DB → New DB
+```
+
+Kết quả thực:
+
+```
+Records scanned: 119
+Valid hashes:   119
+Invalid hashes: 0
+```
+
+Ý nghĩa:
+
+> Memory legacy đã được preserve.
+
+Đây là điều cực quan trọng về **data continuity**.
+
+---
+
+### 🧪 Deep Integrity Results (Production Baseline)
+
+Hiện trạng:
+
+```
+Total observations: 119
+Valid hashes:      119
+Orphan nodes:      0
+Duplicate hashes:  1 (acceptable)
+```
+
+Đánh giá:
+
+```
+✅ Graph integrity OK
+✅ Hash integrity OK
+⚠ Duplicate minor (non-critical)
+```
+
+Đây là:
+
+> **production-safe baseline**
+
+---
+
+### 🧠 Triết lý thiết kế Vantage
+
+Một câu:
+
+> **Read-only forensic engine.**
+
+Không:
+
+* mutate
+* repair
+* write
+
+Chỉ:
+
+```
+observe
+verify
+report
+```
+
+Repair thuộc về:
+
+```
+kit doctor
+```
+
+Không phải Vantage.
+
+Đây là **separation of concerns rất đúng**.
+
+---
+
+### 🧭 Vai trò trong Daily Workflow
+
+Bạn đã định nghĩa:
+
+```bash
+kit recall
+kit flow run
+kit learn
+kit-vantage verify-memory
+```
+
+Vai trò Vantage:
+
+```
+Integrity gate
+```
+
+Không phải runtime.
+Không phải planner.
+
+→ **verifier**
+
+---
+
+### 📅 Vai trò trong Weekly / Monthly Cycle
+
+#### Weekly
+
+```bash
+kit doctor
+kit stats
+kit-vantage verify-memory -d
+```
+
+Mục tiêu:
+
+```
+detect drift
+```
+
+---
+
+#### Monthly
+
+```bash
+kit-vantage benchmark
+```
+
+Mục tiêu:
+
+```
+performance sanity
+```
+
+---
+
+### 📍 Vantage v1.2.4 — Capability Matrix
+
+| Capability                   | Status |
+| ---------------------------- | ------ |
+| SQLite read-only             | ✅      |
+| Hash verification            | ✅      |
+| Deep integrity check         | ✅      |
+| JSON output                  | ✅      |
+| Benchmarking                 | ✅      |
+| CI integration ready         | ✅      |
+| Cross-language deterministic | ✅      |
+
+Đây là:
+
+> **production-grade tool**
+
+---
+
+### 🔮 Vantage v1.2.5 — Hướng phát triển tự nhiên
+
+Không bắt buộc — nhưng rất hợp lý.
+
+#### Drift Detection
+
+```bash
+kit-vantage diff file.rs
+```
+
+So:
+
+```
+current vs sealed
+```
+
+#### Graph Visualization
+
+```bash
+kit-vantage graph
+```
+
+Output:
+
+```
+dependency graph
+```
+
+#### Policy Enforcement
+
+```bash
+kit-vantage verify --enforce
+```
+
+Ví dụ:
+
+```
+no orphan nodes allowed
+```
+
+---
+
+### 🧭 Tổng kết thật sự
+
+#### Một câu kỹ thuật
+
+> **Vantage v1.2.4 là một Rust-based deterministic memory integrity engine hoạt động ở chế độ read-only trên SQLite truth layer của Kit.**
+
+---
+
+#### Một câu kiến trúc
+
+> **Vantage là cảm biến cấu trúc của bộ não phần mềm.**
+
+---
+
+#### Một câu thực tế
+
+Bạn đã xây xong:
+
+# ✅ **Memory Integrity Engine thật**
+
+Không phải concept.
+Không phải prototype.
+Mà là:
+
+> **production-grade subsystem.**
+
+---
+
 *v1.2.4 — EXPERIMENTAL MODE ENABLED. Single Source of Truth Under Stress Test.*

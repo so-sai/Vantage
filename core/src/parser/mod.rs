@@ -262,11 +262,11 @@ impl EpistemicParser {
             let caller = self.find_containing_function(node, source);
             if let Some(method_node) = node.child_by_field_name("name") {
                 let method_name = method_node.utf8_text(source.as_bytes()).unwrap_or("");
-                if let Some(from) = caller {
-                    if !method_name.is_empty() {
-                        let to = SymbolId::new(method_name);
-                        graph.add_edge(&from, &to, DependencyKind::CallEdge);
-                    }
+                if let Some(from) = caller
+                    && !method_name.is_empty()
+                {
+                    let to = SymbolId::new(method_name);
+                    graph.add_edge(&from, &to, DependencyKind::CallEdge);
                 }
             }
         }
@@ -355,7 +355,7 @@ impl EpistemicParser {
                 // Phase B: Normalization (Geometric Target -> Signal)
                 if let Some((target_start, target_end, target_role)) = self.find_geometric_target(node, source) {
                     let target_kind = Self::role_to_kind(target_role);
-                    let signal = self.map_to_signal_from_offset(uuid, target_start, target_end, &target_kind, source, path);
+                    let signal = self.map_to_signal_from_offset(uuid, target_start, target_end, target_kind, source, path);
                     signals.push(signal);
                 }
             }
@@ -416,7 +416,7 @@ impl EpistemicParser {
         let semantic_hash = Self::compute_hash(&semantic_content);
 
         // CAF hash - use placeholder since we don't have node access
-        let caf_hash = "INDEXED_CAF".to_string();
+        let _caf_hash = "INDEXED_CAF".to_string();
 
         // Normalized hash
         let normalized_str = String::from_utf8_lossy(&normalized_content);
@@ -478,18 +478,9 @@ impl EpistemicParser {
     }
 
     pub fn find_geometric_target(&mut self, anchor: Node, _source: &str) -> Option<(usize, usize, u8)> {
-        let anchor_end = anchor.end_byte();
-        let result = self.find_first_solid_after_byte(anchor_end);
-        result
+        self.find_first_solid_after_byte(anchor.end_byte())
     }
 
-    fn as_solid_target<'a>(&self, node: Node<'a>) -> Option<Node<'a>> {
-        let kind = node.kind();
-        if node.is_named() && self.solid_kinds.iter().any(|k| k == kind) {
-            return Some(node);
-        }
-        None
-    }
 
     fn build_solid_node_index(&mut self, root: Node) {
         self.solid_node_index.clear();
@@ -498,15 +489,15 @@ impl EpistemicParser {
     }
 
     fn collect_solid_nodes(&mut self, node: Node) {
-        if let Some(kind_str) = self.solid_kinds.iter().find(|k| *k == node.kind()) {
-            if node.is_named() {
-                let role = Self::kind_to_role(kind_str);
-                self.solid_node_index.push((
-                    node.start_byte(),
-                    node.end_byte(),
-                    role as u8,
-                ));
-            }
+        if let Some(kind_str) = self.solid_kinds.iter().find(|k| *k == node.kind())
+            && node.is_named()
+        {
+            let role = Self::kind_to_role(kind_str);
+            self.solid_node_index.push((
+                node.start_byte(),
+                node.end_byte(),
+                role as u8,
+            ));
         }
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -553,100 +544,6 @@ impl EpistemicParser {
         None
     }
 
-    fn map_to_signal(
-        &mut self,
-        uuid: String,
-        node: Node,
-        source: &str,
-        file_path: &str,
-    ) -> CognitiveSignal {
-        let span = node.byte_range();
-        let content = &source.as_bytes()[span.clone()];
-        let kind_str = node.kind();
-
-        // Determinism: normalize line endings (\r\n → \n) before hashing.
-        // This ensures structural_hash is identical across Windows and Unix.
-        let normalized_content: Vec<u8> = {
-            let as_str = std::str::from_utf8(content).unwrap_or("");
-            as_str.replace("\r\n", "\n").replace('\r', "\n").into_bytes()
-        };
-
-        // Normalized Mapping
-        let symbol_kind = match self.language_name.as_str() {
-            "rust" => match kind_str {
-                "function_item" => SymbolKind::Function,
-                "struct_item" => SymbolKind::Struct,
-                "enum_item" => SymbolKind::Enum,
-                "trait_item" => SymbolKind::Trait,
-                "mod_item" => SymbolKind::Other("module".to_string()),
-                _ => SymbolKind::Other(kind_str.to_string()),
-            },
-            "python" => match kind_str {
-                "function_definition" | "async_function_definition" => SymbolKind::Function,
-                "class_definition" => SymbolKind::Class,
-                _ => SymbolKind::Other(kind_str.to_string()),
-            },
-            _ => SymbolKind::Other(kind_str.to_string()),
-        };
-
-        let symbol_id = self.extract_symbol_id(node, source);
-        let structural_hash = Self::compute_hash(&normalized_content);
-
-        // Semantic Hash (whitespace-stripped, including normalized line endings)
-        let semantic_content: Vec<u8> = normalized_content
-            .iter()
-            .filter(|&&b| !b.is_ascii_whitespace())
-            .cloned()
-            .collect();
-        let semantic_hash = Self::compute_hash(&semantic_content);
-
-        // CAF-based hash (using hardened NodeId lookup)
-        let caf_hash = self.node_id_map.get(&node.start_byte())
-            .and_then(|id| self.arena.get(id))
-            .map(|entry| entry.stamp.hash.value.clone())
-            .unwrap_or_else(|| "MISSING_CAF_ID".to_string());
-
-        // Normalized hash (rename-invariant): strip identifiers, keep operators and whitespace
-        // This makes renaming variables/functions not affect the hash, but whitespace changes do
-        let normalized_str = String::from_utf8_lossy(&normalized_content);
-        let normalized_content_for_hash: String = normalized_str
-            .chars()
-            .filter(|c| !c.is_alphabetic() && *c != '_')
-            .collect();
-        let normalized_hash = Self::compute_hash(normalized_content_for_hash.as_bytes());
-
-        // Source Location from tree-sitter
-        let start_pos = node.start_position();
-        let end_pos = node.end_position();
-        let location = SourceLocation {
-            file: file_path.to_string(),
-            start_line: (start_pos.row + 1) as u32,
-            start_col: start_pos.column as u32,
-            end_line: (end_pos.row + 1) as u32,
-            end_col: end_pos.column as u32,
-            byte_start: span.start,
-            byte_end: span.end,
-        };
-
-        CognitiveSignal {
-            uuid,
-            symbol_id,
-            parent: None,
-            symbol_kind,
-            language: self.language_name.clone(),
-            structural_hash,
-            semantic_hash,
-            normalized_hash,
-            signature: None,
-            location,
-            metadata: HashMap::new(),
-            origin: Origin {
-                parser: format!("tree-sitter-{}", self.language_name),
-                version: env!("CARGO_PKG_VERSION").to_string(),
-            },
-            confidence: 1.0,
-        }
-    }
 
     /// Compute CAF hash using commutativity-aware hashing with scope context
     /// Compute CAF hash with O(depth) incremental support.
@@ -755,32 +652,6 @@ impl EpistemicParser {
     }
 
 
-    fn extract_symbol_id(&self, node: Node, source: &str) -> SymbolId {
-        if let Some(id_node) = node.child_by_field_name("name") {
-            return SymbolId::new(id_node
-                .utf8_text(source.as_bytes())
-                .unwrap_or("unknown"));
-        }
-        if let Some(id_node) = node.child_by_field_name("function") {
-            return SymbolId::new(id_node
-                .utf8_text(source.as_bytes())
-                .unwrap_or("unknown"));
-        }
-
-        // Fallback for ERROR nodes: find the first identifier
-        if node.kind() == "ERROR" {
-            let mut cursor = node.walk();
-            for child in node.children(&mut cursor) {
-                if child.kind() == "identifier" {
-                    return SymbolId::new(child
-                        .utf8_text(source.as_bytes())
-                        .unwrap_or("unknown"));
-                }
-            }
-        }
-
-        SymbolId::new("unnamed")
-    }
 
     fn extract_name_from_node(source: &str, byte_start: usize, byte_end: usize, kind: &str) -> SymbolId {
         // For solid nodes we found via index, we have the exact byte range

@@ -1,7 +1,5 @@
 #[cfg(test)]
-mod vil_tests {
-    use super::*;
-    use crate::CapabilityDescriptor;
+mod tests {
     use crate::CAPABILITY_REGISTRY;
 
     #[test]

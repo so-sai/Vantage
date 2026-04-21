@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PerfMetrics {
     /// Total number of nodes recomputed in the current incremental pass
     pub nodes_recomputed: u32,
@@ -27,20 +27,6 @@ pub struct PerfMetrics {
     start_time: Option<std::time::Instant>,
 }
 
-impl Default for PerfMetrics {
-    fn default() -> Self {
-        Self {
-            nodes_recomputed: 0,
-            nodes_reused: 0,
-            max_depth: 0,
-            max_dirty_chain: 0,
-            latency_ns: 0,
-            nodes_skipped: 0,
-            memory_delta_bytes: None,
-            start_time: None,
-        }
-    }
-}
 
 impl PerfMetrics {
     pub fn new() -> Self {

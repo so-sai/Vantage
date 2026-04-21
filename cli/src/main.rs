@@ -107,6 +107,11 @@ enum Commands {
         #[arg(long, default_value = ".kit")]
         path: PathBuf,
     },
+    /// Extract dependency edges from source files
+    ExtractEdges {
+        /// Path to the source directory or file
+        path: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -141,6 +146,7 @@ fn main() -> Result<()> {
         } => dispatch::execute_introspect(list, capability, json, envelope, limits),
         Commands::VerifyMemory { path, json, deep } => dispatch::execute_verify(path, json, deep),
         Commands::Benchmark { path } => dispatch::execute_benchmark(&path),
+        Commands::ExtractEdges { path } => dispatch::execute_extract_edges(path),
     };
 
     if let Err(e) = result {

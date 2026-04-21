@@ -24,7 +24,6 @@ pub struct DeepVerificationResult {
 
 #[derive(Debug)]
 struct BakedObservation {
-    id: i64,
     content: String,
     structural_hash: String,
 }
@@ -71,7 +70,7 @@ pub fn verify_kit_memory(kit_path: &Path) -> Result<KitVerificationResult> {
     let observations: Vec<BakedObservation> = stmt
         .query_map([], |row| {
             Ok(BakedObservation {
-                id: row.get(0)?,
+                
                 content: row.get(1)?,
                 structural_hash: row.get(2)?,
             })
@@ -173,7 +172,7 @@ pub fn benchmark(kit_path: &Path) -> Result<BenchmarkResult> {
     let observations: Vec<BakedObservation> = stmt
         .query_map([], |row| {
             Ok(BakedObservation {
-                id: row.get(0)?,
+                
                 content: row.get(1)?,
                 structural_hash: row.get(2)?,
             })

@@ -17,7 +17,7 @@ impl Default for NodeId {
 
 /// Virtual Root for workspace-wide distinct identity.
 /// Prevents root-level collisions across multiple files.
-pub const DOMAIN_ROOT: NodeId = NodeId(0xDFD0_DFD0_DFD0_DFD0_DFD0_DFD0_DFD0_DFD0);
+pub const DOMAIN_ROOT: NodeId = NodeId(0xDFD0DFD0DFD0DFD0DFD0DFD0DFD0DFD0);
 
 impl NodeId {
     pub const INVALID: NodeId = NodeId(0);
@@ -39,9 +39,9 @@ impl NodeId {
         hasher.update(b"NODEID_v1");
 
         // 1. Version Injection
-        hasher.update(&HashVersion::CURRENT.semantic_role_version.to_le_bytes());
-        hasher.update(&HashVersion::CURRENT.hash_algo_version.to_le_bytes());
-        hasher.update(&HashVersion::CURRENT.canonicalization_version.to_le_bytes());
+        hasher.update(HashVersion::CURRENT.semantic_role_version.to_le_bytes());
+        hasher.update(HashVersion::CURRENT.hash_algo_version.to_le_bytes());
+        hasher.update(HashVersion::CURRENT.canonicalization_version.to_le_bytes());
 
         // 2. Parent Salt
         match parent_id {
@@ -55,7 +55,7 @@ impl NodeId {
         }
 
         // 3. Salt with Semantic Role (ABI Stable)
-        hasher.update(&(role as u16).to_le_bytes());
+        hasher.update((role as u16).to_le_bytes());
 
         // 4. Salt with Identity Anchor
         let anchor_bytes = anchor.to_stable_bytes();

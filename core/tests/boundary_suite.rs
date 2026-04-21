@@ -6,7 +6,8 @@
 use vantage_core::parser::EpistemicParser;
 use vantage_types::{IdentityAnchor, NodeId, SemanticRole, SymbolGraphDTO, SymbolId};
 
-mod identity_boundary {
+#[cfg(test)]
+mod tests {
     use super::*;
 
     #[test]
@@ -59,10 +60,6 @@ mod identity_boundary {
 
         assert_ne!(id_original.index, id_renamed.index);
     }
-}
-
-mod structural_hash_boundary {
-    use super::*;
 
     #[test]
     fn whitespace_only_is_non_breaking() {
@@ -310,9 +307,9 @@ mod failure_injection {
         let mut parser = EpistemicParser::new_rust_parser().unwrap();
 
         let result = parser.parse_with_graph("// @epistemic:bad-1\nfn { { { [[[", "bad.rs");
-
-        // Parser may return empty graph but should not crash
-        assert!(result.1.nodes.len() >= 0);
+        
+        // Ensure we got a result without crashing
+        drop(result);
     }
 
     #[test]
@@ -322,6 +319,6 @@ mod failure_injection {
         let mut parser = EpistemicParser::new_rust_parser().unwrap();
         let result = parser.parse_with_graph(source, "unicode.rs");
 
-        assert!(result.1.nodes.len() >= 0);
+        assert!(!result.1.nodes.is_empty());
     }
 }
