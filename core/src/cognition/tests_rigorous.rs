@@ -215,17 +215,17 @@ mod tests {
                 assert_eq!(
                     ref_sig.structural_hash, run_sig.structural_hash,
                     "Run {} structural_hash mismatch for {}",
-                    i, ref_sig.symbol_id.fqn
+                    i, ref_sig.symbol_id.to_string()
                 );
                 assert_eq!(
                     ref_sig.semantic_hash, run_sig.semantic_hash,
                     "Run {} semantic_hash mismatch for {}",
-                    i, ref_sig.symbol_id.fqn
+                    i, ref_sig.symbol_id.to_string()
                 );
                 assert_eq!(
                     ref_sig.normalized_hash, run_sig.normalized_hash,
                     "Run {} normalized_hash mismatch for {}",
-                    i, ref_sig.symbol_id.fqn
+                    i, ref_sig.symbol_id.to_string()
                 );
             }
         }
@@ -275,7 +275,7 @@ mod tests {
             let signals = parser.parse_signals(source, "test.rs");
             let order: Vec<String> = signals
                 .iter()
-                .map(|s| s.symbol_id.fqn.to_string())
+                .map(|s| s.symbol_id.to_string().to_string())
                 .collect();
             all_orderings.push(order);
         }
@@ -319,7 +319,7 @@ mod tests {
             let mut edge_order: Vec<String> = Vec::new();
             for node in &dto.nodes {
                 for edge in &node.dependencies {
-                    edge_order.push(format!("{}->{}", node.symbol.fqn, edge.target.fqn));
+                    edge_order.push(format!("{}->{}", node.symbol.to_string(), edge.target.to_string()));
                 }
             }
             edge_order.sort();
@@ -412,7 +412,7 @@ mod tests {
         let status_map: std::collections::HashMap<String, DriftStatus> = report
             .items
             .iter()
-            .map(|item| (item.symbol_id.fqn.to_string(), item.status))
+            .map(|item| (item.symbol_id.to_string().to_string(), item.status))
             .collect();
 
         assert_eq!(

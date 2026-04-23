@@ -25,7 +25,8 @@ impl IdentityAnchor {
         match self {
             IdentityAnchor::Binding(sym) => {
                 buf.push(0x01);
-                let fqn_bytes = sym.fqn.as_bytes();
+                let name = crate::symbol_id::registry().get_name(sym);
+                let fqn_bytes = name.as_bytes();
                 buf.extend((fqn_bytes.len() as u32).to_le_bytes());
                 buf.extend(fqn_bytes);
             }

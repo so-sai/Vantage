@@ -26,7 +26,7 @@ fn print_json_error(reason: FailureReason, message: &str, file: Option<&str>) {
             "reason": reason,
             "message": message,
             "file": file,
-        }))
+    }))
         .unwrap_or_default()
     );
 }
@@ -46,11 +46,11 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                     &format!("Unsupported file extension: {}", ext),
                     Some(&path_str),
                 );
-            } else {
+        } else {
                 eprintln!("Error: Unsupported file extension: {}", ext);
-            }
-            std::process::exit(1);
         }
+            std::process::exit(1);
+    }
     };
 
     if enforce {
@@ -62,11 +62,11 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
         Err(e) => {
             if use_json {
                 print_json_error(FailureReason::InternalError, &e, Some(&path_str));
-            } else {
+        } else {
                 eprintln!("Error: {}", e);
-            }
-            std::process::exit(1);
         }
+            std::process::exit(1);
+    }
     };
 
     let source = match std::fs::read_to_string(&path) {
@@ -78,11 +78,11 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                     &e.to_string(),
                     Some(&path_str),
                 );
-            } else {
+        } else {
                 eprintln!("Error: Failed to read file: {}", e);
-            }
-            std::process::exit(1);
         }
+            std::process::exit(1);
+    }
     };
 
     let result = pipeline.run(&source, &path_str);
@@ -101,16 +101,16 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                     "line": s.location.start_line,
                     "hash": s.structural_hash,
                     "norm_hash": s.normalized_hash,
-                })).collect::<Vec<_>>(),
+            })).collect::<Vec<_>>(),
                 "claims": result.claims.iter().map(|c| json!({
                     "type": format!("{:?}", c.claim_type).to_lowercase(),
                     "label": format!("{:?}", c.label),
                     "confidence": c.confidence,
-                })).collect::<Vec<_>>(),
+            })).collect::<Vec<_>>(),
                 "verdicts": result.verdicts,
                 "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
                 
-            }))?
+        }))?
         );
     } else {
         println!("[*] File: {}", path_str);
@@ -122,7 +122,7 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                 sig.symbol_id,
                 &sig.structural_hash[..8]
             );
-        }
+    }
         println!("[*] Claims: {}", result.claims.len());
         for claim in &result.claims {
             println!(
@@ -130,16 +130,16 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                 claim.claim_type,
                 claim.confidence * 100.0
             );
-        }
+    }
         println!("[*] Verdicts: {}", result.verdicts.len());
         for verdict in &result.verdicts {
             let symbol = match verdict.decision {
                 Decision::Allow => "OK",
                 Decision::Warn => "WARN",
                 Decision::Reject => "BLOCK",
-            };
+        };
             println!("  [{}] {}", symbol, verdict.reason);
-        }
+    }
         println!("[*] Duration: {}ms", result.duration_ms);
     }
 
@@ -177,7 +177,7 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
                 "verdicts": result.verdicts,
                 "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
                 
-            }))?
+        }))?
         );
     } else {
         println!(
@@ -200,7 +200,7 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
                 green!(sig.symbol_id.to_string()),
                 cyan!(&sig.structural_hash[..8])
             );
-        }
+    }
 
         println!("\n🧠 Claims: {}", yellow!(result.claims.len().to_string()));
         for claim in &result.claims {
@@ -209,7 +209,7 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
                 claim.claim_type,
                 claim.confidence * 100.0
             );
-        }
+    }
 
         println!("\n⚖️  Verdicts:");
         for verdict in &result.verdicts {
@@ -217,20 +217,20 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
                 Decision::Allow => green!("✅"),
                 Decision::Warn => yellow!("⚠️ "),
                 Decision::Reject => red!("🚫"),
-            };
+        };
             println!("  {} [{:?}] {}", symbol, verdict.decision, verdict.reason);
-        }
+    }
 
         let final_color = match result.final_decision {
             Decision::Allow => bold!(green!("ALLOW")),
             Decision::Warn => bold!(yellow!("WARN")),
             Decision::Reject => bold!(red!("REJECT")),
-        };
+    };
         println!("\n🏁 Final Decision: {}", final_color);
 
         if result.final_decision == Decision::Reject {
             std::process::exit(1);
-        }
+    }
     }
 
     Ok(())
@@ -262,15 +262,15 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
                 let lang = match Language::from_extension(ext) {
                     Some(l) => l,
                     None => continue,
-                };
+            };
                 let mut pipe = match Pipeline::new(lang) {
                     Ok(p) => p,
                     Err(_) => continue,
-                };
+            };
                 let source = match std::fs::read_to_string(p) {
                     Ok(s) => s,
                     Err(_) => continue,
-                };
+            };
                 let rel_path = p
                     .strip_prefix(&path)
                     .unwrap_or(p)
@@ -283,10 +283,10 @@ pub fn execute_seal(path: PathBuf) -> Result<()> {
                         "s": sig.symbol_id.to_string(),
                         "h": sig.structural_hash,
                         "n": sig.normalized_hash,
-                    }));
-                }
+                }));
             }
         }
+    }
     }
 
     let ts = std::time::SystemTime::now()
@@ -378,15 +378,15 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
                     end_col: 0,
                     byte_start: 0,
                     byte_end: 0,
-                },
+            },
                 metadata: std::collections::HashMap::new(),
                 origin: vantage_core::Origin {
                     parser: String::new(),
                     version: String::new(),
-                },
+            },
                 confidence: 1.0,
-            })
         })
+    })
         .collect();
 
     let current_by_norm: std::collections::HashMap<String, &vantage_core::CognitiveSignal> =
@@ -407,7 +407,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             b.structural_hash = baseline.structural_hash.clone();
             b.location = current.location.clone();
             b.symbol_id = current.symbol_id.clone();
-        } else {
+    } else {
             // Hash differs (logic changed) - use current's location/symbol but keep baseline hash for comparison
             // Find by symbol_id instead
             if let Some(current) = current_result
@@ -416,8 +416,8 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
                 .find(|c| c.symbol_id == baseline.symbol_id)
             {
                 b.location = current.location.clone();
-            }
         }
+    }
         aligned_baseline.push(b);
     }
 
@@ -429,11 +429,11 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
             obj.insert("v".to_string(), json!(VANTAGE_VERSION));
             let status = if report.structural_changes == 0 && report.added == 0 && report.removed == 0 {
                 "ok"
-            } else {
+        } else {
                 "drift"
-            };
+        };
             obj.insert("status".to_string(), json!(status));
-        }
+    }
         println!("{}", serde_json::to_string_pretty(&output)?);
     } else {
         println!("[VANTAGE DRIFT REPORT v1.2.4]");
@@ -456,7 +456,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
                 vantage_core::DriftStatus::SemanticChange => ("SEM", "semantic change"),
                 vantage_core::DriftStatus::Added => ("+", "added"),
                 vantage_core::DriftStatus::Removed => ("-", "removed"),
-            };
+        };
             println!(
                 "  [{}] {} @ {} - {}",
                 status_str,
@@ -464,16 +464,16 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
                 item.location,
                 desc
             );
-        }
+    }
 
         let has_changes = report.structural_changes > 0 || report.added > 0 || report.removed > 0;
         if has_changes {
             println!();
             println!("[!] DRIFT DETECTED");
-        } else {
+    } else {
             println!();
             println!("[OK] NO DRIFT");
-        }
+    }
     }
 
     Ok(())
@@ -486,7 +486,7 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
 #[tracing::instrument(skip_all, fields(target = %path.display()))]
 pub fn execute_graph(path: PathBuf, use_json: bool) -> Result<()> {
     use std::time::Instant;
-    use tracing::{info, warn};
+    use tracing::info;
 
     let start_time = Instant::now();
     info!("Initializing forensic graph extraction pipeline...");
@@ -534,13 +534,10 @@ pub fn execute_graph(path: PathBuf, use_json: bool) -> Result<()> {
         println!("Nodes:   {}", yellow!(dto.nodes.len().to_string()));
         println!("Latency: {} µs", elapsed_micros);
 
-        if elapsed_micros > 10_000 {
-            warn!("Performance Budget Exceeded! Target limit is < 1ms.");
-        }
     }
-
     Ok(())
 }
+
 
 /// Execute performance benchmarks for incremental structural extraction
 #[tracing::instrument]
@@ -639,7 +636,7 @@ pub fn execute_introspect(
         let env = SystemEnvelope::current();
         if use_json {
             println!("{}", serde_json::to_string_pretty(&env)?);
-        } else {
+    } else {
             println!("{}", bold!(yellow!("📦 SYSTEM ENVELOPE")));
             println!("  Version:           {}", env.version);
             println!("  Safe Node Limit:   {}", env.safe_node_limit);
@@ -647,7 +644,7 @@ pub fn execute_introspect(
             println!("  Deterministic:     {}", env.deterministic);
             println!("  Zero-Copy:         {}", env.zero_copy);
             println!("  O(n log n) Guarantee: {}", env.o_n_log_n_guarantee);
-        }
+    }
         return Ok(());
     }
 
@@ -659,13 +656,13 @@ pub fn execute_introspect(
                 serde_json::to_string_pretty(&json!({
                     "safe_node_limit": env.safe_node_limit,
                     "nonlinear_boundary": env.nonlinear_boundary,
-                }))?
+            }))?
             );
-        } else {
+    } else {
             println!("{}", bold!(yellow!("⚡ PERFORMANCE LIMITS")));
             println!("  Safe Node Limit:   {}", env.safe_node_limit);
             println!("  Nonlinear Boundary: {}", env.nonlinear_boundary);
-        }
+    }
         return Ok(());
     }
 
@@ -680,10 +677,10 @@ pub fn execute_introspect(
                         "name": e.name,
                         "inputs": e.inputs,
                         "outputs": e.outputs,
-                    })).collect::<Vec<_>>(),
-                }))?
+                })).collect::<Vec<_>>(),
+            }))?
             );
-        } else {
+    } else {
             println!("{}", bold!(yellow!("🔍 VANTAGE CAPABILITY REGISTRY")));
             println!("[*] Total capabilities: {}\n", entries.len());
             for e in entries {
@@ -691,8 +688,8 @@ pub fn execute_introspect(
                 println!("  ├─ Inputs:  {}", e.inputs.join(", "));
                 println!("  ├─ Outputs: {}", e.outputs.join(", "));
                 println!("  └─ Help:    {}\n", e.help);
-            }
         }
+    }
     } else if let Some(name) = capability {
         if let Some(cap) = CAPABILITY_REGISTRY.get(&name) {
             if use_json {
@@ -705,30 +702,30 @@ pub fn execute_introspect(
                         "outputs": cap.outputs,
                         "invariants": cap.invariants,
                         "help": cap.help,
-                    }))?
+                }))?
                 );
-            } else {
+        } else {
                 println!("{}", bold!(cyan!(format!("▶ {}", cap.name))));
                 println!("  Inputs:    {}", cap.inputs.join(", "));
                 println!("  Outputs:   {}", cap.outputs.join(", "));
                 println!("  Invariants:");
                 for inv in cap.invariants {
                     println!("    - {}", inv);
-                }
-                println!("\n  Help: {}", cap.help);
             }
-        } else {
+                println!("\n  Help: {}", cap.help);
+        }
+    } else {
             if use_json {
                 print_json_error(
                     FailureReason::InternalError,
                     &format!("Capability '{}' not found", name),
                     None,
                 );
-            } else {
+        } else {
                 eprintln!("Error: Capability '{}' not found", name);
-            }
-            std::process::exit(1);
         }
+            std::process::exit(1);
+    }
     } else {
         if use_json {
             print_json_error(
@@ -736,9 +733,9 @@ pub fn execute_introspect(
                 "Specify --list or --capability",
                 None,
             );
-        } else {
+    } else {
             eprintln!("Error: Specify --list or --capability <name>");
-        }
+    }
         std::process::exit(1);
     }
 
@@ -758,13 +755,13 @@ pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
             struct DeepOutput {
                 basic: KitVerificationResult,
                 deep: DeepVerificationResult,
-            }
+        }
             let output = DeepOutput {
                 basic: result.clone(),
                 deep: deep_result.clone(),
-            };
+        };
             println!("{}", serde_json::to_string_pretty(&output)?);
-        } else {
+    } else {
             println!("Records scanned: {}", result.records_scanned);
             println!();
             println!("{}", bold!("Deep Verification:"));
@@ -777,10 +774,10 @@ pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
             let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
             if overall_ok {
                 println!("{}", bold!(green!("✅ Overall: SAFE")));
-            } else {
+        } else {
                 println!("{}", bold!(red!("❌ Overall: UNSAFE")));
-            }
         }
+    }
 
         let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
         std::process::exit(if overall_ok { 0 } else { 2 });
@@ -789,12 +786,12 @@ pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
 
         if use_json {
             println!("{}", serde_json::to_string_pretty(&result)?);
-        } else {
+    } else {
             if result.integrity_ok {
                 println!("{}", bold!(green!("✅ INTEGRITY OK")));
-            } else {
+        } else {
                 println!("{}", bold!(red!("❌ INTEGRITY FAIL")));
-            }
+        }
             println!("  Records scanned: {}", result.records_scanned);
             println!("  Valid hashes:   {}", result.valid_hashes);
             println!("  Invalid hashes: {}", result.invalid_hashes);
@@ -802,13 +799,13 @@ pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
                 println!("\n{}", bold!(red!("Errors:")));
                 for err in result.errors.iter().take(5) {
                     println!("  - {}", err);
-                }
             }
         }
+    }
 
         if !result.integrity_ok {
             std::process::exit(1);
-        }
+    }
     }
 
     Ok(())

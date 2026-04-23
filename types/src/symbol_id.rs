@@ -79,7 +79,6 @@ impl SymbolRegistry {
 
         if let Some(&index) = name_lock.get(canonical.as_str()) {
             return SymbolId {
-                fqn: id_lock[index as usize].clone(),
                 index,
                 registry_epoch: self.epoch,
             };
@@ -89,10 +88,9 @@ impl SymbolRegistry {
         let interned: Arc<str> = Arc::from(canonical);
 
         name_lock.insert(Box::from(interned.as_ref()), index);
-        id_lock.push(interned.clone());
+        id_lock.push(interned);
 
         SymbolId {
-            fqn: interned,
             index,
             registry_epoch: self.epoch,
         }
@@ -100,11 +98,19 @@ impl SymbolRegistry {
 
     pub fn resolve_id(&self, index: u64) -> Option<SymbolId> {
         let id_lock = self.id_to_name.lock().expect("ID registry poisoned");
-        id_lock.get(index as usize).map(|fqn| SymbolId {
-            fqn: fqn.clone(),
-            index,
-            registry_epoch: self.epoch,
-        })
+        if index < id_lock.len() as u64 {
+            Some(SymbolId {
+                index,
+                registry_epoch: self.epoch,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_name(&self, id: &SymbolId) -> Arc<str> {
+        let id_lock = self.id_to_name.lock().expect("ID registry poisoned");
+        id_lock.get(id.index as usize).cloned().unwrap_or_else(|| Arc::from("unknown"))
     }
 
     fn canonicalize(&self, input: &str) -> String {
@@ -133,9 +139,8 @@ impl SymbolRegistry {
 }
 
 /// Forensic-grade Logical Identity (v1.2.4)
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct SymbolId {
-    pub fqn: Arc<str>,
     pub index: u64,
     pub registry_epoch: u32,
 }
@@ -159,7 +164,7 @@ impl Serialize for SymbolId {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_u64(self.index)
+        serializer.serialize_str(&registry().get_name(self))
     }
 }
 
@@ -168,17 +173,14 @@ impl<'de> Deserialize<'de> for SymbolId {
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::Error;
-        let index = u64::deserialize(deserializer)?;
-        registry().resolve_id(index).ok_or_else(|| {
-            D::Error::custom(format!("Registry Identity DRIFT: unknown index {}", index))
-        })
+        let fqn = String::deserialize(deserializer)?;
+        Ok(registry().intern(&fqn))
     }
 }
 
 impl fmt::Display for SymbolId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.fqn)
+        write!(f, "{}", registry().get_name(self))
     }
 }
 

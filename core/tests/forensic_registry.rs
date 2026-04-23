@@ -12,7 +12,7 @@ fn test_bijective_mapping() {
     // Invariant: Bijective 1:1 mapping
     assert_eq!(id1.index, id2.index, "Same FQN must result in same numeric ID");
     assert_eq!(id1.registry_epoch, id2.registry_epoch, "Epochs must match within a session");
-    assert_eq!(id1.fqn.as_ref(), s1);
+    assert_eq!(id1.to_string().as_ref(), s1);
 }
 
 #[test]
@@ -24,7 +24,7 @@ fn test_ptr_eq_sync() {
 
     // Invariant: index equality == pointer equality
     assert!(id1.identity_eq(&id2));
-    assert!(Arc::ptr_eq(&id1.fqn, &id2.fqn));
+    assert!(Arc::ptr_eq(&id1.to_string(), &id2.to_string()));
     
     assert!(!id1.identity_eq(&id3));
 }
@@ -77,7 +77,7 @@ fn test_reverse_lookup_integrity() {
     let id = reg.intern("crate::reverse_test");
 
     let resolved = reg.resolve_id(id.index).expect("Reverse lookup failed");
-    assert!(Arc::ptr_eq(&id.fqn, &resolved.fqn), "Pointer equality must be preserved during reverse lookup");
+    assert!(Arc::ptr_eq(&id.to_string(), &resolved.to_string()), "Pointer equality must be preserved during reverse lookup");
     assert_eq!(id.index, resolved.index);
 }
 

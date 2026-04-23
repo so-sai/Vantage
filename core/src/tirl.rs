@@ -34,8 +34,8 @@ impl GraphInvariant {
             .nodes
             .values()
             .map(|n| NodeKey {
-                symbol_id: n.symbol.fqn.to_string(),
-                structural_hash: n.symbol.fqn.to_string(),
+                symbol_id: n.symbol.to_string().to_string(),
+                structural_hash: n.symbol.to_string().to_string(),
             })
             .collect();
 
@@ -46,8 +46,8 @@ impl GraphInvariant {
                 n.dependencies
                     .iter()
                     .map(|dep| EdgeKey {
-                        from: n.symbol.fqn.to_string(),
-                        to: dep.target.fqn.to_string(),
+                        from: n.symbol.to_string().to_string(),
+                        to: dep.target.to_string().to_string(),
                         kind: dep.kind as u8,
                     })
                     .collect::<Vec<_>>()
@@ -62,7 +62,7 @@ impl GraphInvariant {
         let nodes: HashSet<NodeKey> = signals
             .iter()
             .map(|s| NodeKey {
-                symbol_id: s.symbol_id.fqn.to_string(),
+                symbol_id: s.symbol_id.to_string().to_string(),
                 structural_hash: s.structural_hash.clone(),
             })
             .collect();

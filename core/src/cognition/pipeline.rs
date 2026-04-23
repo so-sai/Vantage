@@ -27,6 +27,10 @@ impl Pipeline {
         let parser = match lang {
             Language::Rust => EpistemicParser::new_rust_parser()?,
             Language::Python => EpistemicParser::new_python_parser()?,
+            Language::Ruby => EpistemicParser::new_ruby_parser()?,
+            Language::Javascript => EpistemicParser::new_javascript_parser()?,
+            Language::Typescript => EpistemicParser::new_typescript_parser()?,
+            Language::Tsx => EpistemicParser::new_tsx_parser()?,
         };
         Ok(Self {
             parser,

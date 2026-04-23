@@ -40,17 +40,21 @@ impl DepNode {
 /// The Single Source of Truth for the Semantic Graph (v1.2.4)
 /// Owned by vantage-core, provides the memory kernel for the Sensor Brain.
 pub struct SymbolDependencyGraph {
-    /// Primary storage for all semantic entities using interned SymbolId keys.
+    /// Maps symbol identity to its structural node
     pub nodes: HashMap<SymbolId, DepNode>,
-    
-    /// Current pass generation
-    pub current_generation: u32,
+
+    /// Raw edges that don't require node resolution (O(1) Sensor mode)
+    pub unresolved_edges: Vec<(SymbolId, SymbolId, DependencyKind)>,
+
+    /// Current analysis generation
+    current_generation: u32,
 }
 
 impl SymbolDependencyGraph {
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
+            unresolved_edges: Vec::new(),
             current_generation: 0,
         }
     }
@@ -71,12 +75,16 @@ impl SymbolDependencyGraph {
     }
 
     /// Register a dependency relationship.
+    /// Register a dependency relationship.
     pub fn add_edge(&mut self, from: &SymbolId, to: &SymbolId, kind: DependencyKind) {
         if from.identity_eq(to) {
             return;
         }
 
-        // 1. Add outgoing edge to 'from' node
+        // 1. Store in the flat list for O(1) Sensor mode (Unresolved emission)
+        self.unresolved_edges.push((from.clone(), to.clone(), kind));
+
+        // 2. Add outgoing edge to 'from' node (if it exists)
         if let Some(node) = self.nodes.get_mut(from) {
             node.dependencies.insert(DependencyEdge {
                 target: to.clone(),
@@ -84,7 +92,7 @@ impl SymbolDependencyGraph {
             });
         }
 
-        // 2. Add incoming edge to 'to' node (reverse tracking)
+        // 3. Add incoming edge to 'to' node (reverse tracking, if it exists)
         if let Some(node) = self.nodes.get_mut(to) {
             node.dependents.insert(from.clone());
         }
@@ -138,18 +146,18 @@ impl SymbolDependencyGraph {
                 state: n.state,
                 dependencies: {
                     let mut d = n.dependencies.iter().cloned().collect::<Vec<_>>();
-                    d.sort_by(|a, b| a.target.fqn.cmp(&b.target.fqn));
+                    d.sort_by(|a, b| a.target.to_string().cmp(&b.target.to_string()));
                     d
                 },
                 dependents: {
                     let mut d = n.dependents.iter().cloned().collect::<Vec<_>>();
-                    d.sort_by(|a, b| a.fqn.cmp(&b.fqn));
+                    d.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
                     d
                 },
             })
             .collect();
         
-        nodes.sort_by(|a, b| a.symbol.fqn.cmp(&b.symbol.fqn));
+        nodes.sort_by(|a, b| a.symbol.to_string().cmp(&b.symbol.to_string()));
 
         SymbolGraphDTO { nodes }
     }

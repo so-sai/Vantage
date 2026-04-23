@@ -22,6 +22,9 @@ streaming-iterator = "0.1"
 tree-sitter = "0.24"
 tree-sitter-rust = "0.23"
 tree-sitter-python = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
 
 # Elite Architecture (v1.2.4)
 tracing = "0.1"

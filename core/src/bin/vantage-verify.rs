@@ -104,6 +104,10 @@ fn main() {
         let lang_ts = match lang {
             Language::Rust => tree_sitter_rust::LANGUAGE.into(),
             Language::Python => tree_sitter_python::LANGUAGE.into(),
+            Language::Ruby => tree_sitter_ruby::LANGUAGE.into(),
+            Language::Javascript => tree_sitter_javascript::LANGUAGE.into(),
+            Language::Typescript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            Language::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
         };
         let _ = p.set_language(&lang_ts);
         let tree = match p.parse(&content, None) {

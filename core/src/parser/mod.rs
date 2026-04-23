@@ -12,6 +12,10 @@ use vantage_types::{CafBuilder, CafContext, CognitiveSignal, DefaultAlgebraResol
 pub enum Language {
     Rust,
     Python,
+    Ruby,
+    Javascript,
+    Typescript,
+    Tsx,
 }
 
 impl Language {
@@ -19,6 +23,10 @@ impl Language {
         match ext {
             "rs" => Some(Language::Rust),
             "py" => Some(Language::Python),
+            "rb" => Some(Language::Ruby),
+            "js" | "jsx" => Some(Language::Javascript),
+            "ts" => Some(Language::Typescript),
+            "tsx" => Some(Language::Tsx),
             _ => None,
         }
     }
@@ -35,14 +43,19 @@ pub struct EpistemicParser {
     node_id_map: HashMap<usize, NodeId>,
     pub caf_context: CafContext,
     solid_node_index: Vec<(usize, usize, u8)>,
+    pub language: Language,
 }
 
 impl EpistemicParser {
     pub fn new(lang_name: &str, solid_kinds: Vec<&str>) -> Result<Self, String> {
         let mut parser = Parser::new();
-        let lang = match lang_name {
-            "rust" => tree_sitter_rust::LANGUAGE.into(),
-            "python" => tree_sitter_python::LANGUAGE.into(),
+        let (lang, language) = match lang_name {
+            "rust" => (tree_sitter_rust::LANGUAGE.into(), Language::Rust),
+            "python" => (tree_sitter_python::LANGUAGE.into(), Language::Python),
+            "ruby" => (tree_sitter_ruby::LANGUAGE.into(), Language::Ruby),
+            "javascript" => (tree_sitter_javascript::LANGUAGE.into(), Language::Javascript),
+            "typescript" => (tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(), Language::Typescript),
+            "tsx" => (tree_sitter_typescript::LANGUAGE_TSX.into(), Language::Tsx),
             _ => return Err(format!("Unsupported language: {}", lang_name)),
         };
 
@@ -52,6 +65,7 @@ impl EpistemicParser {
 
         Ok(Self {
             parser,
+            language,
             language_name: lang_name.to_string(),
             solid_kinds: solid_kinds.iter().map(|s| s.to_string()).collect(),
             algebra_resolver: DefaultAlgebraResolver::new(),
@@ -91,6 +105,51 @@ impl EpistemicParser {
                 "class_definition",
                 "decorated_definition",
                 "async_function_definition",
+            ],
+        )
+    }
+
+    pub fn new_ruby_parser() -> Result<Self, String> {
+        Self::new(
+            "ruby",
+            vec![
+                "method",
+                "class",
+                "module",
+            ],
+        )
+    }
+
+    pub fn new_javascript_parser() -> Result<Self, String> {
+        Self::new(
+            "javascript",
+            vec![
+                "function_declaration",
+                "arrow_function",
+                "call_expression",
+            ],
+        )
+    }
+
+    pub fn new_typescript_parser() -> Result<Self, String> {
+        Self::new(
+            "typescript",
+            vec![
+                "function_declaration",
+                "method_definition",
+                "interface_declaration",
+                "type_alias_declaration",
+            ],
+        )
+    }
+
+    pub fn new_tsx_parser() -> Result<Self, String> {
+        Self::new(
+            "tsx",
+            vec![
+                "function_declaration",
+                "jsx_element",
+                "jsx_opening_element",
             ],
         )
     }
@@ -214,11 +273,12 @@ impl EpistemicParser {
         
         let mut signals = Vec::new();
         self.extract_and_normalize(root, &normalized, &mut signals, path);
-
-        // Determinism: sort signals by byte_start for stable ordering
         signals.sort_by_key(|s| s.location.byte_start);
 
         let mut graph = SymbolDependencyGraph::new();
+        
+        // Actually walk the tree to find calls!
+        self.extract_call_graph(root, &normalized, path, &mut graph);
 
         // Add nodes from signals
         for sig in &signals {
@@ -246,13 +306,80 @@ impl EpistemicParser {
         use vantage_types::graph::DependencyKind;
 
         let kind = node.kind();
+        let caller = self.find_containing_function(node, source);
+
+        // Ruby: call, method_call, command
+        if self.language == Language::Ruby {
+            if kind == "call" || kind == "method_call" || kind == "command" {
+                let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
+                if let Some(to) = self.extract_called_name(node, source) {
+                    graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                    
+                    // Capture symbol arguments as potential dependencies
+                    // e.g. before_action :authenticate_user!
+                    for i in 0..node.child_count() {
+                        let child = node.child(i).unwrap();
+                        if child.kind() == "argument_list" {
+                            for j in 0..child.child_count() {
+                                let arg = child.child(j).unwrap();
+                                if arg.kind() == "simple_symbol" || arg.kind() == "symbol" {
+                                    let sym_text = arg.utf8_text(source.as_bytes()).unwrap_or("").trim_start_matches(':');
+                                    if !sym_text.is_empty() {
+                                        graph.add_edge(&from, &vantage_types::SymbolId::new(sym_text), DependencyKind::CallEdge);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // JS/TS: call_expression, jsx_opening_element, jsx_self_closing_element
+        if self.language == Language::Javascript || self.language == Language::Typescript || self.language == Language::Tsx {
+            if kind == "call_expression" || kind == "jsx_opening_element" || kind == "jsx_self_closing_element" {
+                if let Some(target) = self.extract_called_name(node, source) {
+                    // Filter out intrinsic tags for JSX (e.g., <div>, <span>)
+                    if kind.starts_with("jsx_") {
+                        let name = target.to_string();
+                        // React components must start with an uppercase letter
+                        if !name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
+                            return;
+                        }
+                    }
+                    let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
+                    graph.add_edge(&from, &target, DependencyKind::CallEdge);
+                }
+            }
+        }
 
         // Rust: call_expression → function()
         // Python: call → function()
         if kind == "call_expression" || kind == "call" {
-            let caller = self.find_containing_function(node, source);
-            let callee = self.extract_called_name(node, source);
-            if let (Some(from), Some(to)) = (caller, callee) {
+            let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
+            if let Some(to) = self.extract_called_name(node, source) {
+                graph.add_edge(&from, &to, DependencyKind::CallEdge);
+            }
+        }
+
+        // Python Decorators: @app.route()
+        if self.language == Language::Python && kind == "decorator" {
+            // Find the decorated function to use as source
+            let mut from = vantage_types::SymbolId::new("crate");
+            if let Some(parent) = node.parent() {
+                if parent.kind() == "decorated_definition" {
+                    for i in 0..parent.child_count() {
+                        let child = parent.child(i).unwrap();
+                        if child.kind() == "function_definition" {
+                            if let Some(name_node) = child.child_by_field_name("name") {
+                                from = SymbolId::new(name_node.utf8_text(source.as_bytes()).unwrap_or("unknown"));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(to) = self.extract_called_name(node, source) {
                 graph.add_edge(&from, &to, DependencyKind::CallEdge);
             }
         }
@@ -303,7 +430,9 @@ impl EpistemicParser {
             let kind = parent.kind();
             if (kind == "function_item"
                 || kind == "function_definition"
-                || kind == "async_function_definition")
+                || kind == "async_function_definition"
+                || kind == "function_declaration"
+                || kind == "method_definition")
                 && let Some(name_node) = parent.child_by_field_name("name")
             {
                 return Some(
@@ -325,6 +454,61 @@ impl EpistemicParser {
                     .utf8_text(source.as_bytes())
                     .unwrap_or("unknown"))
             );
+        }
+
+        // Ruby: method_call (method field), call (method field), command (method field)
+        if self.language == Language::Ruby {
+            let method = node.child_by_field_name("method");
+            let receiver = node.child_by_field_name("receiver");
+
+            if let Some(m) = method {
+                let m_text = m.utf8_text(source.as_bytes()).unwrap_or("unknown");
+                if let Some(r) = receiver {
+                    let r_text = r.utf8_text(source.as_bytes()).unwrap_or("");
+                    return Some(SymbolId::new(&format!("{}.{}", r_text, m_text)));
+                } else {
+                    return Some(SymbolId::new(m_text));
+                }
+            }
+
+            // Fallback: If no method field, look for identifier/constant children
+            for i in 0..node.child_count() {
+                let child = node.child(i).unwrap();
+                let c_kind = child.kind();
+                if c_kind == "identifier" || c_kind == "constant" {
+                    return Some(SymbolId::new(child.utf8_text(source.as_bytes()).unwrap_or("unknown")));
+                }
+            }
+        }
+
+        // JS/TS: call_expression (function field), jsx_opening_element/jsx_self_closing_element (name field)
+        if self.language == Language::Javascript || self.language == Language::Typescript || self.language == Language::Tsx {
+            if let Some(name_node) = node.child_by_field_name("name") {
+                return Some(SymbolId::new(name_node.utf8_text(source.as_bytes()).unwrap_or("unknown")));
+            }
+            if let Some(func_node) = node.child_by_field_name("function") {
+                return Some(SymbolId::new(func_node.utf8_text(source.as_bytes()).unwrap_or("unknown")));
+            }
+            
+            // Fallback: Use the first identifier/member_expression child (common for JSX and simple calls)
+            for i in 0..node.child_count() {
+                let child = node.child(i).unwrap();
+                let c_kind = child.kind();
+                if c_kind == "identifier" || c_kind == "member_expression" || c_kind == "property_identifier" || c_kind == "jsx_member_expression" {
+                    return Some(SymbolId::new(child.utf8_text(source.as_bytes()).unwrap_or("unknown")));
+                }
+            }
+        }
+        
+        // Python Decorator target
+        if self.language == Language::Python && node.kind() == "decorator" {
+             // Decorator usually has an identifier or call child
+             for i in 0..node.child_count() {
+                 let child = node.child(i).unwrap();
+                 if child.kind() == "identifier" || child.kind() == "call" || child.kind() == "attribute" {
+                     return Some(SymbolId::new(child.utf8_text(source.as_bytes()).unwrap_or("unknown")));
+                 }
+             }
         }
         // Fallback: first child
         if let Some(first) = node.child(0) {
@@ -722,5 +906,9 @@ pub fn get_parser(lang: Language) -> Result<EpistemicParser, String> {
     match lang {
         Language::Rust => EpistemicParser::new_rust_parser(),
         Language::Python => EpistemicParser::new_python_parser(),
+        Language::Ruby => EpistemicParser::new_ruby_parser(),
+        Language::Javascript => EpistemicParser::new_javascript_parser(),
+        Language::Typescript => EpistemicParser::new_typescript_parser(),
+        Language::Tsx => EpistemicParser::new_tsx_parser(),
     }
 }
