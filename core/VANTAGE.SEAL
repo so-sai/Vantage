@@ -1,6 +1,30 @@
 {
   "map": [
     {
+      "f": "tests\\boundary_suite.rs",
+      "h": "a3ad2774b57d38f251b63a90567c8c2c4e936ff3433da70c3d6b8f7c95fff291",
+      "n": "19d8212bc62f9eee6077e93c4eb6dc3fd03e60b4ecdd6c9f2a89f6e08f96149f",
+      "s": "tests"
+    },
+    {
+      "f": "tests\\boundary_suite.rs",
+      "h": "a3ad2774b57d38f251b63a90567c8c2c4e936ff3433da70c3d6b8f7c95fff291",
+      "n": "19d8212bc62f9eee6077e93c4eb6dc3fd03e60b4ecdd6c9f2a89f6e08f96149f",
+      "s": "tests"
+    },
+    {
+      "f": "tests\\boundary_suite.rs",
+      "h": "5ad3441c420f33e472b8a3b0acc5505b2b5f7aa32ea542bb1d7d41908173ec38",
+      "n": "315c79a0fd843426a9dafad3fe5c1659cd98cec49870d9fed1abf97cfaf30521",
+      "s": "call_expression"
+    },
+    {
+      "f": "tests\\edge_audit.rs",
+      "h": "450b53001227885e0eb3325e40dbca400aadd6ecefcaa09fd82bfe73fbfa284a",
+      "n": "24f3e5f41360936fc2f2eaac54ee523d120da61c36c176b38de31e8cd651acb2",
+      "s": "unknown"
+    },
+    {
       "f": "test_sample.rs",
       "h": "86002cbc8076c572ce99c18faed10fffc804a2e60622ee4ad7b6f3602aef349d",
       "n": "51edfb6e6c75b8e6b7f3ab430b7119da79ff9165c00f734e8d851b1011c1f602",
@@ -17,8 +41,44 @@
       "h": "6d8cf88736bc3b4f5f8cafd4d750f877d95772af08d2c8d9f327d93f8b717cca",
       "n": "6a9e79c847e1e56ef2e6267b1e2d2b1c13df48a1d993322431cb0bece769fc84",
       "s": "TEST_CONST"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "c93802327a6e4ece06f416acd9643252b131a5e53c2dd4c55549e2b23d4aa804",
+      "n": "c11504efcaa4ba9098bf7390b9235fead76a22fba792673d654a9088222d3766",
+      "s": "parser"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "b7c3b8c0bcc120b2e14be1594a54a368783c9e2f4ace2d15036fdc3eff68120a",
+      "n": "6983efff892a4d12327ee99a758aa67b3b6a06bf86836a1c930d852e4fc799d6",
+      "s": "cognition"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "a86fd4377cc1055415a4ad280bfe97c6c93e0be128a509bce3fb1e7d3077ac3b",
+      "n": "e6fe9e7925104bac3f7276167a099c2f22fd4ad365072454c4aae414787f1818",
+      "s": "graph"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "cc7ee768a5ba800c6bdbfd08837b9b912f3c1a99639a117e433fa944d309ee57",
+      "n": "acfdb7799b1aaf6d881b04393e93aa634d3aaabd7118a09e513e8518c40b2adb",
+      "s": "intent"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "de940874fd549b640dc707a8d8a42ee865cb4e30d7fd651fe97a2cd4786d4131",
+      "n": "d4007e8ed24bf46a63043015c1c74b36ce0f41889fa203543fde863354a42e91",
+      "s": "main"
+    },
+    {
+      "f": "v1_2_4_seal.rs",
+      "h": "de940874fd549b640dc707a8d8a42ee865cb4e30d7fd651fe97a2cd4786d4131",
+      "n": "d4007e8ed24bf46a63043015c1c74b36ce0f41889fa203543fde863354a42e91",
+      "s": "main"
     }
   ],
-  "ts": 1776236234,
+  "ts": 1776916447,
   "v": "1.2.4-ULTRA-LEAN"
 }

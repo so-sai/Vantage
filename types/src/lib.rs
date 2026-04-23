@@ -9,6 +9,7 @@ pub mod arena;
 pub mod caf;
 pub mod collision;
 pub mod dirty_propagation;
+pub mod edge;
 pub mod graph;
 pub mod hash;
 pub mod identity_anchor;
@@ -25,7 +26,6 @@ pub mod symbol_id;
 pub mod telemetry;
 pub mod version;
 
-pub mod edge;
 pub mod introspection;
 pub mod introspection_registry;
 
@@ -41,6 +41,7 @@ pub use arena::NodeArena;
 pub use caf::{CafBuilder, CafDiffReason, CafDiffResult, CafDiffer, CafHash, CafNode};
 pub use collision::NodeFingerprint;
 pub use dirty_propagation::DirtyPropagator;
+pub use edge::{EdgeEvent, EdgeType};
 pub use graph::{DependencyEdge, DependencyKind, SymbolGraphDTO, SymbolNodeDTO, SymbolState};
 pub use hash::{HashAlgorithm, SemanticHash, StructuralHash, SymbolHash};
 pub use identity_anchor::IdentityAnchor;
@@ -64,7 +65,6 @@ pub use symbol::SymbolKind;
 pub use symbol_id::{interner, registry, SymbolId, SymbolRegistry, SymbolScopeRegistry};
 pub use telemetry::PerfMetrics;
 pub use version::HashVersion;
-pub use edge::EdgeEvent;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

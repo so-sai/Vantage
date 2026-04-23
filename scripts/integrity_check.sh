@@ -2,7 +2,7 @@
 # scripts/integrity_check.sh - Vantage Linux Integrity Check (v1.2.4)
 set -e
 
-VANTAGE_BIN="./target/release/vantage"
+VANTAGE_BIN="./target/release/kit-vantage"
 TEST_FILE="core/test_sample.rs"
 
 echo "[VANTAGE] Starting Linux Integrity Check..."

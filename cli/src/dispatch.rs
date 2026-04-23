@@ -109,7 +109,7 @@ pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Resu
                 })).collect::<Vec<_>>(),
                 "verdicts": result.verdicts,
                 "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
-                "duration_ms": result.duration_ms,
+                
             }))?
         );
     } else {
@@ -176,7 +176,7 @@ fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> 
                 "claims": result.claims.len(),
                 "verdicts": result.verdicts,
                 "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
-                "duration_ms": result.duration_ms,
+                
             }))?
         );
     } else {
@@ -427,6 +427,12 @@ pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result
         let mut output = serde_json::to_value(&report)?;
         if let Some(obj) = output.as_object_mut() {
             obj.insert("v".to_string(), json!(VANTAGE_VERSION));
+            let status = if report.structural_changes == 0 && report.added == 0 && report.removed == 0 {
+                "ok"
+            } else {
+                "drift"
+            };
+            obj.insert("status".to_string(), json!(status));
         }
         println!("{}", serde_json::to_string_pretty(&output)?);
     } else {

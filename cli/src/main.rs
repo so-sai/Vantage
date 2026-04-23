@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "kit-vantage")]
-#[command(version = "1.2.4-ULTRA-LEAN")]
+#[command(version = "1.2.4")]
 #[command(about = "Vantage Structural Sensor - [ZERO-LAG] CPU-bound forensic extraction", long_about = None)]
 struct Cli {
     #[command(subcommand)]
