@@ -851,7 +851,6 @@ pub fn execute_sync_kit(path: PathBuf) -> Result<()> {
     Ok(())
 }
 
-
 #[tracing::instrument(skip_all, fields(path = %path.display()))]
 pub fn execute_benchmark(path: &Path) -> Result<()> {
     use crate::kit_integration::benchmark;
