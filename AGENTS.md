@@ -10,21 +10,20 @@ NAVIGATION:
 AGENTS.md → laws
 
 CORE LOOP:
-introspect → recall → act → verify → learn
+introspect → recall → graph → act → verify → learn
 
 TOOL ROUTING:
 unknown → kit introspect
 context → kit recall
-search → kit search
 graph → kit-vantage graph
 debug → kit doctor
 verify → kit-vantage verify-memory
 persist → kit learn
 
 VANTAGE:
-structural truth sensor
-dependency graph engine
-all DONE pass verify-memory
+structural + dependency sensor
+graph before edit
+verify before done
 
 FAIL LOOP:
 doctor → recall → fix → verify

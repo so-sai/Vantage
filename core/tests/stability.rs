@@ -37,7 +37,7 @@ mod stability_tests {
             let signal = &signals[0];
 
             // Invariant 2: Symbol ID must be stable
-            assert_eq!(signal.symbol_id.to_string().as_ref(), "target_logic");
+            assert_eq!(&signal.symbol_id.to_string(), "target_logic");
 
             // Invariant 3: Semantic Hash must be identical regardless of junk
             // (Note: This assumes our semantic hash implementation is logic-pure)

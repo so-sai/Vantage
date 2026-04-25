@@ -91,14 +91,14 @@ fn test_invariant_symbol_tombstone_graceful_eviction() {
     let sym_a = SymbolId::new("crate::module::AgentLogic");
     
     // Simulate Generation 1: File reading
-    graph.current_generation = 1;
-    let mut node = DepNode::new(sym_a.clone(), "test.rs", 0, graph.current_generation);
+    graph.bump_generation();
+    let mut node = DepNode::new(sym_a.clone(), "test.rs", 0, graph.generation());
     node.state = SymbolState::Validated;
     graph.nodes.insert(sym_a.clone(), node);
 
     // Simulate Generation 2: AI decides to delete this function
-    graph.current_generation = 2;
-    graph.mark_tombstones(); // Automatically marks nodes older than current_generation as Tombstoned
+    graph.bump_generation(); // Simulate Generation 2: AI decides to delete this function
+    graph.mark_tombstones();
     
     // Assert 3: Deleted symbol MUST NOT disappear immediately (Prevents dangling edges)
     assert!(graph.nodes.contains_key(&sym_a), "FATAL: Symbol deleted too early, causes ghost edges");
@@ -106,8 +106,8 @@ fn test_invariant_symbol_tombstone_graceful_eviction() {
     assert_eq!(graph.nodes.get(&sym_a).unwrap().generation, 2, "Tombstones must have their generation bumped for grace period");
 
     // Simulate Generation 3: Garbage Collection
-    graph.current_generation = 3;
-    graph.gc(); // Should evict generating < 3
+    graph.bump_generation(); // Simulate Generation 3: Garbage Collection
+    graph.gc();
 
     // Assert 4: GC must cleanly remove it on the next generation
     assert!(!graph.nodes.contains_key(&sym_a), "FATAL: Memory Leak! Tombstoned node not evicted.");

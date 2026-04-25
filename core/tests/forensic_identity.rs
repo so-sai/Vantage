@@ -15,8 +15,7 @@ fn test_identity_uniqueness_pointer_eq() {
     let id2 = SymbolId::new(fqn);
 
     // RULE: Arc::ptr_eq must be true for identical FQNs
-    assert!(Arc::ptr_eq(&id1.to_string(), &id2.to_string()), "Identity split! Pointer equality failed.");
-    assert!(id1.identity_eq(&id2), "Forensic identity_eq failed.");
+    assert!(id1.identity_eq(&id2), "Identity split! Pointer equality failed.");
 }
 
 #[test]
@@ -26,13 +25,13 @@ fn test_interner_collision_resistance_stress() {
     let first = SymbolId::new(key);
     for _ in 0..10000 {
         let current = SymbolId::new(key);
-        assert!(Arc::ptr_eq(&first.to_string(), &current.to_string()), "Collision/Fragmentation in interner!");
+        assert!(first.identity_eq(&current), "Collision/Fragmentation in interner!");
     }
 
     // Negative test: Different inputs must never collide
     let id_a = SymbolId::new("symbol_a");
     let id_b = SymbolId::new("symbol_b");
-    assert!(!Arc::ptr_eq(&id_a.to_string(), &id_b.to_string()), "False positive identity collision!");
+    assert!(!id_a.identity_eq(&id_b), "False positive identity collision!");
 }
 
 #[test]
@@ -43,8 +42,8 @@ fn test_canonicalite_idempotency_closure() {
     let id3 = SymbolId::new(&id2.to_string());
 
     // RULE: normalize(normalize(x)) == normalize(x)
-    assert!(Arc::ptr_eq(&id1.to_string(), &id2.to_string()), "Canonicalization is NOT idempotent (Run 2)");
-    assert!(Arc::ptr_eq(&id2.to_string(), &id3.to_string()), "Canonicalization is NOT idempotent (Run 3)");
+    assert!(id1.identity_eq(&id2), "Canonicalization is NOT idempotent (Run 2)");
+    assert!(id2.identity_eq(&id3), "Canonicalization is NOT idempotent (Run 3)");
 }
 
 // ============================================================================
@@ -60,9 +59,9 @@ fn test_identity_boundary_integrity() {
     // Ensure all nodes in graph are interned by matching pointers
     // with a second intern call for the same FQN string.
     for node in graph.nodes.values() {
-        let fqn = node.symbol.to_string().as_ref();
-        let verification_ptr = vantage_types::registry().intern(fqn);
-        assert!(Arc::ptr_eq(&node.symbol.to_string(), &verification_ptr.to_string()), 
+        let fqn = node.symbol.to_string();
+        let verification_ptr = vantage_types::registry().intern(&fqn);
+        assert!(node.symbol.identity_eq(&verification_ptr),
             "Identity Leakage! Node for {} contains an uninterned/raw Arc.", fqn);
     }
 }

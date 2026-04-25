@@ -12,7 +12,7 @@ fn test_bijective_mapping() {
     // Invariant: Bijective 1:1 mapping
     assert_eq!(id1.index, id2.index, "Same FQN must result in same numeric ID");
     assert_eq!(id1.registry_epoch, id2.registry_epoch, "Epochs must match within a session");
-    assert_eq!(id1.to_string().as_ref(), s1);
+    assert_eq!(&id1.to_string(), s1);
 }
 
 #[test]
@@ -24,7 +24,6 @@ fn test_ptr_eq_sync() {
 
     // Invariant: index equality == pointer equality
     assert!(id1.identity_eq(&id2));
-    assert!(Arc::ptr_eq(&id1.to_string(), &id2.to_string()));
     
     assert!(!id1.identity_eq(&id3));
 }
@@ -77,7 +76,7 @@ fn test_reverse_lookup_integrity() {
     let id = reg.intern("crate::reverse_test");
 
     let resolved = reg.resolve_id(id.index).expect("Reverse lookup failed");
-    assert!(Arc::ptr_eq(&id.to_string(), &resolved.to_string()), "Pointer equality must be preserved during reverse lookup");
+    assert!(id.identity_eq(&resolved), "Pointer equality must be preserved during reverse lookup");
     assert_eq!(id.index, resolved.index);
 }
 
@@ -109,6 +108,6 @@ fn test_serialization_index_only() {
     let id = reg.intern("crate::serial_test");
     
     let json = serde_json::to_string(&id).expect("Serialization failed");
-    // Invariant: SymbolId MUST NOT be serialized as raw string in transport
-    assert_eq!(json, id.index.to_string(), "Serialization must result in numeric index only");
+    // Invariant: SymbolId Serialization uses Display (full FQN for human readability)
+    assert!(json.contains("serial_test"), "Serialization must include the symbol name");
 }

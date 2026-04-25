@@ -47,7 +47,7 @@ pub struct SymbolDependencyGraph {
     pub unresolved_edges: Vec<(SymbolId, SymbolId, DependencyKind)>,
 
     /// Current analysis generation
-    current_generation: u32,
+    pub current_generation: u32,
 }
 
 impl SymbolDependencyGraph {
@@ -61,6 +61,10 @@ impl SymbolDependencyGraph {
 
     pub fn bump_generation(&mut self) {
         self.current_generation += 1;
+    }
+
+    pub fn generation(&self) -> u32 {
+        self.current_generation
     }
 
     /// Register a symbol discovery.
