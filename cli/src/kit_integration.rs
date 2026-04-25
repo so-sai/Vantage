@@ -194,3 +194,57 @@ pub fn benchmark(kit_path: &Path) -> Result<BenchmarkResult> {
         records_per_sec,
     })
 }
+
+/// Verify that Kit is initialized and matches the expected version
+pub fn check_kit_version(kit_path: &Path, expected: &str) -> Result<()> {
+    let db_path = kit_path.join("local_brain.db");
+    if !db_path.exists() {
+        anyhow::bail!("Kit not initialized. Run 'kit init' first.");
+    }
+
+    let conn = Connection::open_with_flags(&db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    
+    // Attempt to read version from metadata table if it exists
+    let version: String = conn.query_row(
+        "SELECT value FROM metadata WHERE key = 'version'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or_else(|_| "unknown".to_string());
+
+    if version != expected && version != "unknown" {
+        anyhow::bail!("Kit version mismatch: found {}, expected {}. Run 'kit init' to upgrade.", version, expected);
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+pub struct EnvStatus {
+    pub kit_init: bool,
+    pub database_ok: bool,
+    pub version: String,
+}
+
+pub fn verify_env(kit_path: &Path) -> Result<EnvStatus> {
+    let db_path = kit_path.join("local_brain.db");
+    let kit_init = db_path.exists();
+    let mut database_ok = false;
+    let mut version = "none".to_string();
+
+    if kit_init {
+        if let Ok(conn) = Connection::open_with_flags(&db_path, OpenFlags::SQLITE_OPEN_READ_ONLY) {
+            database_ok = conn.execute_batch("SELECT 1 FROM observations LIMIT 1").is_ok();
+            version = conn.query_row(
+                "SELECT value FROM metadata WHERE key = 'version'",
+                [],
+                |row| row.get(0),
+            ).unwrap_or_else(|_| "unknown".to_string());
+        }
+    }
+
+    Ok(EnvStatus {
+        kit_init,
+        database_ok,
+        version,
+    })
+}

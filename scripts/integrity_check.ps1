@@ -1,7 +1,7 @@
 # scripts/integrity_check.ps1 - Vantage Windows Integrity Check (v1.2.4)
 $ErrorActionPreference = "Stop"
 
-$VANTAGE_BIN = ".\target\release\vantage.exe"
+$VANTAGE_BIN = ".\target\release\kit-vantage.exe"
 $TEST_FILE = "core\test_sample.rs"
 
 Write-Host "[VANTAGE] Starting Windows Integrity Check..." -ForegroundColor Cyan

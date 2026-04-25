@@ -112,6 +112,21 @@ enum Commands {
         /// Path to the source directory or file
         path: PathBuf,
     },
+    /// Verify environment (Kit + Vantage contract)
+    VerifyEnv {
+        /// Path to .kit directory (defaults to .kit)
+        #[arg(long, default_value = ".kit")]
+        path: PathBuf,
+        /// Output in JSON format
+        #[arg(long, short = 'j')]
+        json: bool,
+    },
+    /// Explicitly sync Kit memory to Vantage graph baseline
+    SyncKit {
+        /// Path to .kit directory (defaults to .kit)
+        #[arg(long, default_value = ".kit")]
+        path: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -147,6 +162,8 @@ fn main() -> Result<()> {
         Commands::VerifyMemory { path, json, deep } => dispatch::execute_verify(path, json, deep),
         Commands::Benchmark { path } => dispatch::execute_benchmark(&path),
         Commands::ExtractEdges { path } => dispatch::execute_extract_edges(path),
+        Commands::VerifyEnv { path, json } => dispatch::execute_verify_env(path, json),
+        Commands::SyncKit { path } => dispatch::execute_sync_kit(path),
     };
 
     if let Err(e) = result {
