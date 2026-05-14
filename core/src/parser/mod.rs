@@ -1,3 +1,5 @@
+pub mod intent_extractor;
+
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use tree_sitter::{Node, Parser};
@@ -286,10 +288,84 @@ impl EpistemicParser {
                 sig.symbol_id.clone(),
                 path,
                 sig.location.start_line,
+                &self.language_name,
+                sig.symbol_kind.clone(),
+                &sig.symbol_id.to_string(),
             );
         }
 
         // Extract call edges
+        self.extract_call_graph(root, &normalized, path, &mut graph);
+
+        (signals, graph)
+    }
+
+    /// Parse source and return ALL solid nodes as signals (no anchor required).
+    /// This is the v1.2.5 path — structural extraction without @epistemic UUID anchors.
+    #[tracing::instrument(skip(self, source))]
+    pub fn parse_all(
+        &mut self,
+        source: &str,
+        path: &str,
+    ) -> (Vec<CognitiveSignal>, crate::SymbolDependencyGraph) {
+        use crate::SymbolDependencyGraph;
+
+        // Normalize same as parse_with_graph
+        let mut normalized = String::with_capacity(source.len());
+        for c in source.chars() {
+            let is_safe =
+                ('\u{0020}'..='\u{007E}').contains(&c) || c == '\n' || c == '\r' || c == '\t';
+            let is_line_breaker =
+                c == '\u{2028}' || c == '\u{2029}' || c == '\u{000b}' || c == '\u{000c}';
+            let is_private = ('\u{E000}'..='\u{F8FF}').contains(&c)
+                || ('\u{F0000}'..='\u{FFFFF}').contains(&c)
+                || ('\u{100000}'..='\u{10FFFF}').contains(&c);
+            let is_control = c.is_control() && c != '\n' && c != '\r' && c != '\t';
+
+            if is_safe {
+                normalized.push(c);
+            } else if is_line_breaker {
+                normalized.push('\n');
+            } else if is_private || is_control {
+                normalized.push(' ');
+            } else {
+                normalized.push(c);
+            }
+        }
+
+        let tree = self.parser.parse(&normalized, None).unwrap_or_else(|| {
+            tracing::error!("Structural parse failed for file: {}", path);
+            std::process::exit(1);
+        });
+        let root = tree.root_node();
+
+        // Build solid node index once (O(n)) for binary search lookup (O(log n) per tag)
+        self.build_solid_node_index(root);
+
+        // Extract ALL solid nodes as signals (no anchor required).
+        // Directly walk the AST for solid nodes to preserve original kind strings.
+        let mut signals = Vec::new();
+        self.extract_solid_nodes(root, source, path, &mut signals);
+        signals.sort_by_key(|s| s.location.byte_start);
+
+        let mut graph = SymbolDependencyGraph::new();
+
+        // Extract call edges
+        self.extract_call_graph(root, &normalized, path, &mut graph);
+
+        // Add nodes from signals
+        for sig in &signals {
+            graph.add_node(
+                sig.symbol_id.clone(),
+                path,
+                sig.location.start_line,
+                &self.language_name,
+                sig.symbol_kind.clone(),
+                &sig.symbol_id.to_string(),
+            );
+        }
+
+        // Extract call edges again for full coverage
         self.extract_call_graph(root, &normalized, path, &mut graph);
 
         (signals, graph)
@@ -583,6 +659,20 @@ impl EpistemicParser {
                 "class_definition" => SymbolKind::Class,
                 _ => SymbolKind::Other(kind_str.to_string()),
             },
+            "ruby" => match kind_str {
+                "method" => SymbolKind::Method,
+                "class" => SymbolKind::Class,
+                "module" => SymbolKind::Module,
+                _ => SymbolKind::Other(kind_str.to_string()),
+            },
+            "javascript" | "typescript" | "tsx" => match kind_str {
+                "function_declaration" | "arrow_function" => SymbolKind::Function,
+                "method_definition" => SymbolKind::Method,
+                "class_declaration" => SymbolKind::Class,
+                "interface_declaration" | "type_alias_declaration" => SymbolKind::Interface,
+                "jsx_element" | "jsx_opening_element" | "jsx_self_closing_element" => SymbolKind::Component,
+                _ => SymbolKind::Other(kind_str.to_string()),
+            },
             _ => SymbolKind::Other(kind_str.to_string()),
         };
 
@@ -641,6 +731,33 @@ impl EpistemicParser {
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
             confidence: 1.0,
+        }
+    }
+
+    /// Extract signals from all solid nodes in the AST (no anchor required).
+    /// Preserves original tree-sitter kind strings for accurate symbol kind mapping.
+    fn extract_solid_nodes(
+        &mut self,
+        node: Node,
+        source: &str,
+        path: &str,
+        signals: &mut Vec<CognitiveSignal>,
+    ) {
+        let kind = node.kind();
+        if self.solid_kinds.iter().any(|k| k == &kind) && node.is_named() {
+            let uuid = format!("solid-{}-{}", node.start_byte(), node.end_byte());
+            let signal = self.map_to_signal_from_offset(
+                uuid,
+                node.start_byte(),
+                node.end_byte(),
+                &kind,
+                source,
+                path,
+            );
+            signals.push(signal);
+        }
+        for child in node.children(&mut node.walk()) {
+            self.extract_solid_nodes(child, source, path, signals);
         }
     }
 
@@ -874,9 +991,9 @@ impl EpistemicParser {
         let name_end = i;
         
         if name_end > name_start {
-            let name = &node_content[name_start..name_end];
+            let name: String = content_chars[name_start..name_end].iter().collect();
             if !name.is_empty() && (name.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false) || name.starts_with('_')) {
-                return SymbolId::new(name);
+                return SymbolId::new(&name);
             }
         }
         

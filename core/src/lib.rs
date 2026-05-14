@@ -1,16 +1,19 @@
 // ============================================================
-// VANTAGE CORE v1.2.4 - Structural Sensor Engine with Symbol Graph
+// VANTAGE CORE v1.2.5 - Structural Sensor Engine with Symbol Graph
 // ============================================================
 
 /// Canonical version string for all Vantage JSON outputs.
 /// Kit parses this to determine output schema version.
-pub const VANTAGE_VERSION: &str = "1.2.4";
+pub const VANTAGE_VERSION: &str = "1.2.5";
 
 pub mod cognition;
 pub mod drift;
+pub mod drift_engine;
 pub mod fingerprint;
 pub mod graph;
 pub mod intent;
+pub mod invariant_engine;
+pub mod normalizer;
 pub mod parser;
 pub mod tirl;
 pub mod extractor;
@@ -22,6 +25,7 @@ pub use cognition::{
 };
 pub use drift::{DriftItem, DriftReport, DriftStatus};
 pub use graph::{SymbolDependencyGraph, DepNode};
+pub use normalizer::Normalizer;
 pub use parser::{EpistemicParser, Language, get_parser};
 pub use tirl::{GraphInvariant, TirlAdapter, reconcile_test_expectation};
 pub use vantage_types::introspection_registry::CAPABILITY_REGISTRY;

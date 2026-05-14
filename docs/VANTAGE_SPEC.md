@@ -1,4 +1,4 @@
-# Vantage v1.2.4 — Structural Identity Engine Spec
+# Vantage v1.2.5 — Structural Identity Engine Spec
 
 **Status**: Phase B (Dirty Propagation Finalization) — **COMPLETE**  
 **Architecture Lock Level**: 98% (Compiler-Grade Forensic Core)  
@@ -8,7 +8,7 @@
 
 # 0. Architecture Evolution
 
-This section documents the transition from legacy modeling to the v1.2.4 Identity Physics.
+This section documents the transition from legacy modeling to the v1.2.5 Identity Physics.
 
 ## v1.2.3 (Legacy Model: Text-Based)
 - **Identity Model**: `FileHash = SHA256(AST Text)`
@@ -18,7 +18,7 @@ This section documents the transition from legacy modeling to the v1.2.4 Identit
     - **Latency**: $O(N)$ where $N$ is file size.
 - **Core Limitation**: Text-based identity led to structural instability and high IDE lag.
 
-## v1.2.4 (Structural Identity Model: Physics-Based)
+## v1.2.5 (Structural Identity Model: Physics-Based)
 - **Identity Model**: `NodeId = Hash(Domain, Version, Parent, Role, Anchor)`
 - **Breakthroughs**:
     - **Parent-Anchored Identity**: Deterministic stability regardless of text shifts.
@@ -146,7 +146,7 @@ Latency for incremental updates must be proportional to the depth of the edit, n
 
 # 5. Performance Targets
 
-| Metric | Target | Verified (v1.2.4 Phase B) |
+| Metric | Target | Verified (v1.2.5 Phase B) |
 | :--- | :--- | :--- |
 | **Identical Parse** | 100% Reuse | **100.00%** |
 | **Deep Edit** | $O(depth)$ Recompute | **Verified** |
@@ -160,7 +160,7 @@ Latency for incremental updates must be proportional to the depth of the edit, n
 - [x] **Phase B — Dirty Propagation**: Hardened iterative traversal and Scope Invariance fix.
 - [ ] **Phase C — Dependency Graph**: Propagating structural changes to symbol relationships.
 - [ ] **Phase D — Budget Control**: 12ms enforcement and resource capping.
-- [ ] **Phase E — Snapshot**: Forensic sealing and persistence.
+- [x] **Phase E — Snapshot**: Forensic sealing and persistence.
 
 ---
 
@@ -433,7 +433,7 @@ Agent MUST NOT depend on Vantage directly
 
 ---
 
-# 15. Constitutional Invariants & Forensic Determinism (v1.2.4-VM)
+# 15. Constitutional Invariants & Forensic Determinism (v1.2.5-VM)
 
 To transition from an engineering prototype to a **Deterministic Structural Virtual Machine**, Vantage enforces the following forensic invariants.
 

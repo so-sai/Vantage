@@ -12,5 +12,5 @@ flow:
       retry: 1
 
     - id: "log_arrival"
-      command: 'kit learn --uid agent_join_event --content "External agent has successfully joined the workspace and synchronized with v1.2.4-TITANIUM contract." --tag note'
+      command: 'kit learn --uid agent_join_event --content "External agent has successfully joined the workspace and synchronized with v1.2.5-RELEASE contract." --tag note'
       idempotent: true

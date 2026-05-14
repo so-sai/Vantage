@@ -1,7 +1,7 @@
 function kitf {
     <#
     .SYNOPSIS
-    Friction Log Wizard v1.2.3 (Armor-Plated Edition)
+    Friction Log Wizard v1.2.5 (Release Edition)
     Dot-source this file in your $PROFILE to enable.
     #>
     try {
@@ -9,7 +9,7 @@ function kitf {
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 
-        Write-Host "`n[🤖 CHẾ ĐỘ SĂN MA SÁT v1.2.3 (BỌC THÉP)]" -ForegroundColor Cyan
+        Write-Host "`n[🤖 CHẾ ĐỘ SĂN MA SÁT v1.2.5 (RELEASE)]" -ForegroundColor Cyan
 
         $symptom = Read-Host "1. Triệu chứng (Symptom)"
         $trigger = Read-Host "2. Tác nhân (Trigger)"

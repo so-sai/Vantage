@@ -80,8 +80,8 @@ fn test_graph_mutation_determinism_invariant() {
     
     // Mutation Sequence
     let ops = |g: &mut SymbolDependencyGraph| {
-        g.add_node(a.clone(), "f1.rs", 10);
-        g.add_node(b.clone(), "f2.rs", 20);
+        g.add_node(a.clone(), "f1.rs", 10, "rust", vantage_types::symbol::SymbolKind::Struct, "A");
+        g.add_node(b.clone(), "f2.rs", 20, "rust", vantage_types::symbol::SymbolKind::Function, "B");
         g.add_edge(&a, &b, DependencyKind::CallEdge);
         g.bump_generation();
     };
@@ -107,7 +107,7 @@ fn test_symbol_lifecycle_state_transition() {
     let id = SymbolId::new("lifecycle_test");
     
     // Pass 1: Discover
-    g.add_node(id.clone(), "file.rs", 1);
+    g.add_node(id.clone(), "file.rs", 1, "rust", vantage_types::symbol::SymbolKind::Struct, "lifecycle_test");
     {
         let node = g.nodes.get(&id).unwrap();
         assert_eq!(node.state, SymbolState::Discovered);

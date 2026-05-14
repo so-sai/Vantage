@@ -1,0 +1,29 @@
+﻿{
+  "baseline_nodes": 3,
+  "current_nodes": 3,
+  "errors": [],
+  "invariants": {
+    "failed": 1,
+    "passed": 2,
+    "results": [
+      {
+        "message": "FAIL: no Struct node found",
+        "passed": false,
+        "spec_id": "global-has-struct"
+      },
+      {
+        "message": "OK: found Function node",
+        "passed": true,
+        "spec_id": "global-has-function"
+      },
+      {
+        "message": "OK: all nodes have structural hash",
+        "passed": true,
+        "spec_id": "global-hash-stable"
+      }
+    ],
+    "total": 3
+  },
+  "status": "ok",
+  "v": "1.2.5"
+}

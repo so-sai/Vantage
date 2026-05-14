@@ -1,10 +1,48 @@
-//! # Structural Edge Types for Kit Integration
+//! # Structural Edge Types for Kit Integration — v1.2.5
 //!
 //! Data Transfer Objects for graph edge extraction between Vantage and Kit.
+//! `EdgeType` is the legacy transport contract for Kit JSONL.
+//! `UnifiedEdgeKind` is the canonical v1.2.5 edge taxonomy (supersedes both EdgeType and DependencyKind).
 
 use serde::{Deserialize, Serialize};
 
-/// Edge type enumeration - locked contract
+/// Canonical edge taxonomy (v1.2.5) — replaces both `EdgeType` and `DependencyKind`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum UnifiedEdgeKind {
+    // --- Module structure ---
+    /// Direct import: `import os`, `use core::auth`
+    Imports,
+    /// From import: `from core.auth import login`
+    FromImport,
+    /// Re-export: `pub use`, `__all__`
+    ReExport,
+
+    // --- Inheritance ---
+    /// Class/struct extension: `class Foo(Bar)`, `struct Foo: Bar`
+    Extends,
+    /// Interface/trait implementation
+    Implements,
+
+    // --- Call graph ---
+    /// Resolved function/method call
+    CallsResolved,
+    /// Unresolved function/method call
+    CallsUnresolved,
+
+    // --- React/JSX (component-oriented) ---
+    /// Component renders another component
+    Renders,
+    /// Hook invocation
+    HooksInto,
+    /// Context consumption
+    UsesContext,
+
+    // --- Generic ---
+    /// Weak dependency (reference, usage)
+    References,
+}
+
+/// Legacy edge type enumeration - locked contract for Kit JSONL transport.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum EdgeType {

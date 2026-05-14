@@ -1,6 +1,6 @@
 [package]
 name = "vantage-types"
-version = "1.2.4"
+version = "1.2.5"
 edition = "2024"
 description = "Authority Contracts and Shared Types for Vantage - Cognitive Intent Protocol and Constitutional Framework"
 license = "MIT OR Apache-2.0"

@@ -3,6 +3,7 @@
 //! Primitives and Data Transfer Objects for the Phase C Semantic Engine.
 //! Separates the Transport Layer from the Authoritative Engine in core.
 
+use crate::symbol::SymbolKind;
 use crate::symbol_id::SymbolId;
 use serde::{Deserialize, Serialize};
 
@@ -57,4 +58,10 @@ pub struct SymbolNodeDTO {
     pub state: SymbolState,
     pub dependencies: Vec<DependencyEdge>,
     pub dependents: Vec<SymbolId>,
+    /// v1.2.5: Source language identifier (e.g. "rust", "python", "ruby")
+    pub language: String,
+    /// v1.2.5: Structural kind (Struct, Class, Function, Component, etc.)
+    pub kind: SymbolKind,
+    /// v1.2.5: Fully-qualified name (e.g. "crate::module::SymbolName")
+    pub fq_name: String,
 }

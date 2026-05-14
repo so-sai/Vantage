@@ -22,7 +22,7 @@ impl ParserExt for EpistemicParser {
 }
 
 fn main() {
-    println!("🧪 VANTAGE v1.2.4: O(depth) PROOF OF CONCEPT");
+    println!("🧪 VANTAGE v1.2.5: O(depth) PROOF OF CONCEPT");
     println!("-------------------------------------------");
 
     let source = r#"

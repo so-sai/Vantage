@@ -1,6 +1,6 @@
 [package]
 name = "vantage-cli"
-version = "1.2.4"
+version = "1.2.5"
 edition = "2024"
 description = "CLI Adapter for Vantage Cognitive Artifact Factory"
 

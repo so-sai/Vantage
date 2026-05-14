@@ -89,16 +89,16 @@ fn test_ordering_invariance_r02() {
     let id_c = SymbolId::new("C");
     
     // Order 1: A, B, C
-    g1.add_node(id_a.clone(), "f.rs", 1);
-    g1.add_node(id_b.clone(), "f.rs", 2);
-    g1.add_node(id_c.clone(), "f.rs", 3);
+    g1.add_node(id_a.clone(), "f.rs", 1, "rust", vantage_types::symbol::SymbolKind::Struct, "A");
+    g1.add_node(id_b.clone(), "f.rs", 2, "rust", vantage_types::symbol::SymbolKind::Struct, "B");
+    g1.add_node(id_c.clone(), "f.rs", 3, "rust", vantage_types::symbol::SymbolKind::Struct, "C");
     let dto1 = g1.to_dto();
     
     // Order 2: C, A, B
     let mut g2 = SymbolDependencyGraph::new();
-    g2.add_node(id_c, "f.rs", 3);
-    g2.add_node(id_a, "f.rs", 1);
-    g2.add_node(id_b, "f.rs", 2);
+    g2.add_node(id_c, "f.rs", 3, "rust", vantage_types::symbol::SymbolKind::Struct, "C");
+    g2.add_node(id_a, "f.rs", 1, "rust", vantage_types::symbol::SymbolKind::Struct, "A");
+    g2.add_node(id_b, "f.rs", 2, "rust", vantage_types::symbol::SymbolKind::Struct, "B");
     let dto2 = g2.to_dto();
     
     assert_eq!(serde_json::to_string(&dto1).unwrap(), serde_json::to_string(&dto2).unwrap(),

@@ -13,5 +13,7 @@ pub enum SymbolKind {
     Constant,
     Variable,
     Interface,
+    /// React/JSX component, Vue component, etc.
+    Component,
     Other(String),
 }

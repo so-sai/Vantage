@@ -1,44 +1,69 @@
 #!/bin/bash
-# scripts/integrity_check.sh - Vantage Linux Integrity Check (v1.2.4)
+# scripts/integrity_check.sh - Vantage Semantic Gatekeeper (v1.2.5)
 set -e
 
 VANTAGE_BIN="./target/release/kit-vantage"
-TEST_FILE="core/test_sample.rs"
+RUST_SAMPLE="tests/golden/rust_sample.rs"
+PY_SAMPLE="tests/golden/python_sample.py"
 
-echo "[VANTAGE] Starting Linux Integrity Check..."
+echo "[VANTAGE] 🛡️ Starting Semantic Integrity Enforcement (v1.2.5)..."
 
-# 1. Determinism Check
-echo "[VANTAGE] Step 1: Determinism Check..."
-$VANTAGE_BIN verify $TEST_FILE --json > out1.json
-$VANTAGE_BIN verify $TEST_FILE --json > out2.json
+# 1. Determinism Guard
+echo "[VANTAGE] Gate 1: Determinism Guard..."
+$VANTAGE_BIN graph $RUST_SAMPLE > out1.json
+$VANTAGE_BIN graph $RUST_SAMPLE > out2.json
 
 if diff out1.json out2.json > /dev/null; then
-    echo "[OK] Determinism verified (identical output across runs)."
+    echo "[OK] Byte-identical output verified across runs."
 else
-    echo "[FAIL] Non-deterministic output detected!"
+    echo "[FAIL] Non-deterministic serialization detected!"
+    diff out1.json out2.json
     exit 1
 fi
 
-# 2. Seal Verification
-echo "[VANTAGE] Step 2: Seal Verification..."
+# 2. Golden Schema Guard
+echo "[VANTAGE] Gate 2: Golden Schema Guard (Rust/Python)..."
 
-# Create a fresh seal for the directory (regenerates after any logic change)
-$VANTAGE_BIN seal core 2>/dev/null || true
+verify_golden() {
+    file=$1
+    golden=$2
+    $VANTAGE_BIN graph $file > current.json
+    if diff -w $golden current.json > /dev/null; then
+        echo "[OK] Golden match: $file"
+    else
+        echo "[FAIL] Schema drift detected in $file!"
+        diff -u $golden current.json
+        rm current.json
+        exit 1
+    fi
+    rm current.json
+}
 
-# Diff against baseline seal - check if status is "ok" (no drift)
-$VANTAGE_BIN diff core/test_sample.rs --json > diff_report.json
+verify_golden $RUST_SAMPLE "tests/golden/rust_sample.golden.json"
+verify_golden $PY_SAMPLE "tests/golden/python_sample.golden.json"
 
-# Check for drift: status field in JSON output
-DRIFT_STATUS=$(python3 -c "import json; d=json.load(open('diff_report.json')); print(d.get('status', 'unknown'))" 2>/dev/null || echo "unknown")
+# 3. Seal & Drift Enforcement
+echo "[VANTAGE] Gate 3: Seal & Drift Enforcement..."
+$VANTAGE_BIN verify . --json > drift_report.json
+STATUS=$(python3 -c "import json; d=json.load(open('drift_report.json')); print(d.get('status', 'unknown'))" 2>/dev/null || echo "unknown")
 
-if [ "$DRIFT_STATUS" = "ok" ]; then
-    echo "[OK] Seal integrity verified (matches baseline)."
+if [ "$STATUS" = "ok" ]; then
+    echo "[OK] Seal integrity verified (0% drift)."
 else
-    echo "[FAIL] Seal drift detected: $DRIFT_STATUS"
-    echo "[INFO] Note: If you changed hash logic, regenerate seal with: vantage seal core"
-    cat diff_report.json
+    echo "[FAIL] Semantic drift detected against VANTAGE.SEAL!"
+    echo "If this change is intentional, run: kit-vantage run ."
+    cat drift_report.json
     exit 1
 fi
 
-rm out1.json out2.json diff_report.json
-echo "[VANTAGE] Integrity Check PASSED."
+# 4. Workspace Cleanliness
+echo "[VANTAGE] Gate 4: Workspace Cleanliness..."
+if git diff --exit-code > /dev/null; then
+    echo "[OK] Workspace is clean after audit."
+else
+    echo "[FAIL] Audit caused hidden mutations in the workspace!"
+    exit 1
+fi
+
+rm out1.json out2.json drift_report.json
+echo "[VANTAGE] ✅ SEMANTIC ENFORCEMENT PASSED."

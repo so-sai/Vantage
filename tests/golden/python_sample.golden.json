@@ -1,0 +1,55 @@
+﻿{
+  "nodes": [
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\python_sample.py",
+      "fq_name": "DataProcessor",
+      "id": "DataProcessor",
+      "kind": "class",
+      "language": "Python",
+      "line": 7,
+      "normalized_hash": "1a689b98a57072d77eff2e3043f62a4fb529790ea327c74f65aa8ad9bec28b81",
+      "structural_hash": "06be76357f42fb465e22128d4128bc7e0f0cf25d3330c9a3977ba3becfcbf95f",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\python_sample.py",
+      "fq_name": "__init__",
+      "id": "__init__",
+      "kind": "function",
+      "language": "Python",
+      "line": 8,
+      "normalized_hash": "6b17ea7b138f0f5deb5da1f83d14a7d087db8abd9a7f2628f3838a6e1c9b47e0",
+      "structural_hash": "210762aea15acbbb199cdfc9b2c02cb82ba4439daa335ac321738c7ddb6fcf8e",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\python_sample.py",
+      "fq_name": "process_data",
+      "id": "process_data",
+      "kind": "function",
+      "language": "Python",
+      "line": 2,
+      "normalized_hash": "90d5587959965ac3f87d584b712e734e8723a3bbe223580ebc7f3c178fc3891e",
+      "structural_hash": "c44dd20c082cc3ea96db898c78e121b096b654b40ff07b571563355fa3d9b99f",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\python_sample.py",
+      "fq_name": "scale",
+      "id": "scale",
+      "kind": "function",
+      "language": "Python",
+      "line": 11,
+      "normalized_hash": "cf27f16e1abce1fb0e24794f67d10c513f050fc4841f09123a24afb9878059da",
+      "structural_hash": "150b4bda2bd51dd384d472358db008063812164d2cd260b027ca7ee4a03e488d",
+      "visibility": "Public"
+    }
+  ],
+  "status": "ok",
+  "total_nodes": 4,
+  "v": "1.2.5"
+}

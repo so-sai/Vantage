@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
+use vantage_types::graph::{DependencyEdge, DependencyKind, SymbolState};
+use vantage_types::symbol::SymbolKind;
 use vantage_types::symbol_id::SymbolId;
-use vantage_types::graph::{SymbolState, DependencyKind, DependencyEdge};
 
 /// The Authoritative DepNode (L1 Structural Layer)
 /// Strictly forensic and engine-owned.
@@ -21,10 +22,26 @@ pub struct DepNode {
 
     /// Arena generation of the last discovery (Used for graceful tombstone eviction)
     pub generation: u32,
+
+    // --- v1.2.5 enrichment ---
+    /// Source language identifier (e.g. "rust", "python", "ruby")
+    pub language: String,
+    /// Structural kind (Struct, Class, Function, Component, etc.)
+    pub kind: SymbolKind,
+    /// Fully-qualified name
+    pub fq_name: String,
 }
 
 impl DepNode {
-    pub fn new(symbol: SymbolId, file: &str, line: u32, generation: u32) -> Self {
+    pub fn new(
+        symbol: SymbolId,
+        file: &str,
+        line: u32,
+        generation: u32,
+        language: &str,
+        kind: SymbolKind,
+        fq_name: &str,
+    ) -> Self {
         Self {
             symbol,
             state: SymbolState::Discovered,
@@ -33,6 +50,9 @@ impl DepNode {
             file: file.to_string(),
             start_line: line,
             generation,
+            language: language.to_string(),
+            kind,
+            fq_name: fq_name.to_string(),
         }
     }
 }
@@ -68,14 +88,14 @@ impl SymbolDependencyGraph {
     }
 
     /// Register a symbol discovery.
-    pub fn add_node(&mut self, symbol: SymbolId, file: &str, line: u32) {
+    pub fn add_node(&mut self, symbol: SymbolId, file: &str, line: u32, language: &str, kind: SymbolKind, fq_name: &str) {
         let generation = self.current_generation;
         self.nodes.entry(symbol.clone())
             .and_modify(|node| {
                 node.generation = generation;
                 node.state = SymbolState::Discovered;
             })
-            .or_insert_with(|| DepNode::new(symbol, file, line, generation));
+            .or_insert_with(|| DepNode::new(symbol, file, line, generation, language, kind, fq_name));
     }
 
     /// Register a dependency relationship.
@@ -158,6 +178,9 @@ impl SymbolDependencyGraph {
                     d.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
                     d
                 },
+                language: n.language.clone(),
+                kind: n.kind.clone(),
+                fq_name: n.fq_name.clone(),
             })
             .collect();
         

@@ -92,7 +92,7 @@ fn test_invariant_symbol_tombstone_graceful_eviction() {
     
     // Simulate Generation 1: File reading
     graph.bump_generation();
-    let mut node = DepNode::new(sym_a.clone(), "test.rs", 0, graph.generation());
+    let mut node = DepNode::new(sym_a.clone(), "test.rs", 0, graph.generation(), "rust", vantage_types::symbol::SymbolKind::Struct, "crate::module::AgentLogic");
     node.state = SymbolState::Validated;
     graph.nodes.insert(sym_a.clone(), node);
 

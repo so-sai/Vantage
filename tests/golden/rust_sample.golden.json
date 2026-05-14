@@ -1,0 +1,73 @@
+﻿{
+  "nodes": [
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\rust_sample.rs",
+      "fq_name": "call_expression",
+      "id": "call_expression",
+      "kind": {
+        "other": "call_expression"
+      },
+      "language": "Rust",
+      "line": 3,
+      "normalized_hash": "a0fa449eff40496882cf6e580ad010648cfbd160308304884f1bd36526bc84c8",
+      "structural_hash": "a13b834b0e64536010d5c02e3d3eb262f48dff854b4bf297c29e2d01a4467660",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\rust_sample.rs",
+      "fq_name": "call_expression",
+      "id": "call_expression",
+      "kind": {
+        "other": "call_expression"
+      },
+      "language": "Rust",
+      "line": 3,
+      "normalized_hash": "40ff5c4ab9ee02ff715986d7626fe7a7ba22aa6836c243164b5946b151cda2ac",
+      "structural_hash": "187bd1bf859565f0641a32a3216e3afe88021e9f0d46aa75783090ee920f2b0c",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\rust_sample.rs",
+      "fq_name": "const",
+      "id": "const",
+      "kind": {
+        "other": "const_item"
+      },
+      "language": "Rust",
+      "line": 13,
+      "normalized_hash": "703f6adb61984b0d8c7d08e4d9c3b26e58d90e5db877029b5bcabf0647381a81",
+      "structural_hash": "f9de39df347bb6addaf5c4502df88a21efdab04e9f2b7db0bab71c520f7bed0b",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\rust_sample.rs",
+      "fq_name": "fn",
+      "id": "fn",
+      "kind": "function",
+      "language": "Rust",
+      "line": 2,
+      "normalized_hash": "c2ba9f9b1bd59845984ccc95343117a815a80693732b7d98350ef759386cbe2d",
+      "structural_hash": "8c405a9516ab5db8bf7fbf54b782b2f058e7778973f06ad6714d505a040445d1",
+      "visibility": "Public"
+    },
+    {
+      "dependencies": [],
+      "file": "tests\\golden\\rust_sample.rs",
+      "fq_name": "struct",
+      "id": "struct",
+      "kind": "struct",
+      "language": "Rust",
+      "line": 7,
+      "normalized_hash": "5358fd6af8c352bc4e48bc5a899b157eb7069673317bd92cb7f3f288b0e5c5c4",
+      "structural_hash": "0351388d2e35abb2e0fa5d3c537efd07114c6d2635c353543949ff7be11a2a1a",
+      "visibility": "Public"
+    }
+  ],
+  "status": "ok",
+  "total_nodes": 5,
+  "v": "1.2.5"
+}

@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+pub const GRAPH_SCHEMA_VERSION: &str = "1.2.5";
+pub const DRIFT_SCHEMA_VERSION: &str = "1.2.5";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HashVersion {
     /// Version of the SemanticRole enum layout

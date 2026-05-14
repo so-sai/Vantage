@@ -9,12 +9,15 @@ pub mod arena;
 pub mod caf;
 pub mod collision;
 pub mod dirty_propagation;
+pub mod drift_graph;
 pub mod edge;
 pub mod graph;
 pub mod hash;
 pub mod identity_anchor;
 pub mod incremental;
+pub mod intent;
 pub mod invariant;
+pub mod invariant_spec;
 pub mod node_id;
 pub mod node_stamp;
 pub mod role_resolver;
@@ -24,6 +27,7 @@ pub mod signal;
 pub mod symbol;
 pub mod symbol_id;
 pub mod telemetry;
+pub mod uir;
 pub mod version;
 
 pub mod introspection;
@@ -41,10 +45,16 @@ pub use arena::NodeArena;
 pub use caf::{CafBuilder, CafDiffReason, CafDiffResult, CafDiffer, CafHash, CafNode};
 pub use collision::NodeFingerprint;
 pub use dirty_propagation::DirtyPropagator;
-pub use edge::{EdgeEvent, EdgeType};
+pub use drift_graph::{
+    diff_intents, diff_nodes, diff_parity, EdgeChangeKind, EdgeDelta, GraphDriftReport,
+    InvariantBreak, NodeDelta, ParityBreak,
+};
+pub use edge::{EdgeEvent, EdgeType, UnifiedEdgeKind};
 pub use graph::{DependencyEdge, DependencyKind, SymbolGraphDTO, SymbolNodeDTO, SymbolState};
 pub use hash::{HashAlgorithm, SemanticHash, StructuralHash, SymbolHash};
 pub use identity_anchor::IdentityAnchor;
+pub use intent::{Constraint, ConstraintKind, IntentInvariant, IntentOverlay};
+pub use uir::{Language, UnifiedEdge, UnifiedGraph, UnifiedNode, Visibility};
 pub use incremental::{
     CafCache, DirtyReason, DirtyRegion, EditKind, IncrementalCafBuilder, IncrementalState,
     InputEdit,
@@ -52,6 +62,7 @@ pub use incremental::{
 pub use invariant::{
     ChangeType, CrossLanguageVerifier, InvariantTestCase, InvariantType, InvariantVerifier,
 };
+pub use invariant_spec::{InvariantReport, InvariantResult, InvariantRule, InvariantScope, InvariantSpec};
 pub use node_id::{NodeId, DOMAIN_ROOT};
 pub use node_stamp::NodeStamp;
 pub use role_resolver::RoleResolver;
@@ -59,12 +70,12 @@ pub use semantic::{
     AlgebraResolver, CafContext, Commutativity, CommutativityTable, DefaultAlgebraResolver,
     ScopeContext, SemanticError, SemanticKind,
 };
+pub use version::{HashVersion, DRIFT_SCHEMA_VERSION, GRAPH_SCHEMA_VERSION};
 pub use semantic_role::SemanticRole;
 pub use signal::{CognitiveSignal, Origin, SourceLocation};
 pub use symbol::SymbolKind;
 pub use symbol_id::{interner, registry, SymbolId, SymbolRegistry, SymbolScopeRegistry};
 pub use telemetry::PerfMetrics;
-pub use version::HashVersion;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

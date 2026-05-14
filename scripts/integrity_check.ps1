@@ -1,48 +1,76 @@
-# scripts/integrity_check.ps1 - Vantage Windows Integrity Check (v1.2.4)
+# scripts/integrity_check.ps1 - Vantage Semantic Gatekeeper (v1.2.5)
 $ErrorActionPreference = "Stop"
 
 $VANTAGE_BIN = ".\target\release\kit-vantage.exe"
-$TEST_FILE = "core\test_sample.rs"
+$RUST_SAMPLE = "tests\golden\rust_sample.rs"
+$PY_SAMPLE = "tests\golden\python_sample.py"
 
-Write-Host "[VANTAGE] Starting Windows Integrity Check..." -ForegroundColor Cyan
+Write-Host "[VANTAGE] 🛡️ Starting Semantic Integrity Enforcement (v1.2.5)..." -ForegroundColor Cyan
 
-# 1. Determinism Check
-Write-Host "[VANTAGE] Step 1: Determinism Check..."
-& $VANTAGE_BIN verify $TEST_FILE --json | Out-File -Encoding UTF8 out1.json
-& $VANTAGE_BIN verify $TEST_FILE --json | Out-File -Encoding UTF8 out2.json
+# 1. Determinism Guard (Zero-Side-Effect Check)
+Write-Host "[VANTAGE] Gate 1: Determinism Guard..."
+& $VANTAGE_BIN graph $RUST_SAMPLE | Out-File -Encoding UTF8 out1.json
+& $VANTAGE_BIN graph $RUST_SAMPLE | Out-File -Encoding UTF8 out2.json
 
 $File1 = Get-Content out1.json -Raw
 $File2 = Get-Content out2.json -Raw
 
 if ($File1 -eq $File2) {
-    Write-Host "[OK] Determinism verified (identical output across runs)." -ForegroundColor Green
+    Write-Host "[OK] Byte-identical output verified across runs." -ForegroundColor Green
 } else {
-    Write-Host "[FAIL] Non-deterministic output detected!" -ForegroundColor Red
+    Write-Host "[FAIL] Non-deterministic serialization detected!" -ForegroundColor Red
+    # Show diff for debugging
+    & git diff --no-index out1.json out2.json
     exit 1
 }
 
-# 2. Seal Verification
-Write-Host "[VANTAGE] Step 2: Seal Verification..."
+# 2. Golden Schema Guard
+Write-Host "[VANTAGE] Gate 2: Golden Schema Guard (Rust/Python)..."
 
-# Regenerate seal to ensure baseline matches current logic (handles hash logic changes)
-& $VANTAGE_BIN seal core 2>$null
+function Verify-Golden($file, $golden) {
+    $currentJson = & $VANTAGE_BIN graph $file | ConvertFrom-Json
+    $expectedJson = Get-Content $golden -Raw | ConvertFrom-Json
+    
+    $currentStr = $currentJson | ConvertTo-Json -Depth 100
+    $expectedStr = $expectedJson | ConvertTo-Json -Depth 100
 
-# Diff against baseline seal
-& $VANTAGE_BIN diff $TEST_FILE --json | Out-File -Encoding UTF8 diff_report.json
+    if ($currentStr.Trim() -eq $expectedStr.Trim()) {
+        Write-Host "[OK] Golden match: $file" -ForegroundColor Green
+    } else {
+        Write-Host "[FAIL] Schema drift detected in $file!" -ForegroundColor Red
+        $currentStr | Out-File -Encoding UTF8 current_drift.json
+        & git diff --no-index $golden current_drift.json
+        Remove-Item current_drift.json
+        exit 1
+    }
+}
 
-$Report = Get-Content diff_report.json | ConvertFrom-Json
+Verify-Golden $RUST_SAMPLE "tests\golden\rust_sample.golden.json"
+Verify-Golden $PY_SAMPLE "tests\golden\python_sample.golden.json"
 
-# Check for drift by looking at items status - "unchanged" means no drift
-$UnchangedCount = ($Report.items | Where-Object { $_.status -eq "unchanged" }).Count
-$TotalItems = $Report.items.Count
+# 3. Seal & Drift Enforcement (Hard Lockdown)
+Write-Host "[VANTAGE] Gate 3: Seal & Drift Enforcement..."
+# Compare workspace against committed VANTAGE.SEAL
+$Report = & $VANTAGE_BIN verify . --json | ConvertFrom-Json
 
-if ($TotalItems -eq 0 -or $UnchangedCount -eq $TotalItems) {
-    Write-Host "[OK] Seal integrity verified (matches baseline)." -ForegroundColor Green
+if ($Report.status -eq "ok") {
+    Write-Host "[OK] Seal integrity verified (0% drift)." -ForegroundColor Green
 } else {
-    Write-Host "[FAIL] Seal drift detected: $UnchangedCount unchanged of $TotalItems" -ForegroundColor Red
-    Get-Content diff_report.json
+    Write-Host "[FAIL] Semantic drift detected against VANTAGE.SEAL!" -ForegroundColor Red
+    Write-Host "If this change is intentional, run: kit-vantage run ." -ForegroundColor Yellow
+    echo $Report | ConvertTo-Json
     exit 1
 }
 
-Remove-Item out1.json, out2.json, diff_report.json
-Write-Host "[VANTAGE] Integrity Check PASSED." -ForegroundColor Green
+# 4. Workspace Cleanliness (No hidden mutations)
+Write-Host "[VANTAGE] Gate 4: Workspace Cleanliness..."
+$GitDiff = git diff --exit-code
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "[OK] Workspace is clean after audit." -ForegroundColor Green
+} else {
+    Write-Host "[FAIL] Audit caused hidden mutations in the workspace!" -ForegroundColor Red
+    exit 1
+}
+
+Remove-Item out1.json, out2.json
+Write-Host "[VANTAGE] ✅ SEMANTIC ENFORCEMENT PASSED." -ForegroundColor Green

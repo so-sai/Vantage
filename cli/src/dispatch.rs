@@ -1,872 +1,321 @@
-//! # Structural Dispatch Module (v1.2.4)
+//! # Structural Dispatch Module (v1.2.5)
 //!
-//! Handles Forensic Structural Intents with optional enforcement pipeline.
-//! Pipeline: signal → claim → invariant → decision.
+//! Three commands:
+//!   run     — parse → normalize → seal
+//!   graph   — extract + output unified dependency graph
+//!   verify  — seal integrity + drift detection
 
 use crate::term::*;
-use serde::Serialize;
-
 use anyhow::{Context, Result};
-
 use ignore::WalkBuilder;
 use serde_json::json;
 use std::path::{Path, PathBuf};
-use std::time::UNIX_EPOCH;
-use vantage_core::cognition::{ClaimType, Decision, InvariantRule, Pipeline};
-use vantage_core::parser::Language;
-use vantage_core::FailureReason;
+use std::time::{SystemTime, UNIX_EPOCH};
+use vantage_core::invariant_engine::engine;
+use vantage_core::normalizer::Normalizer;
 use vantage_core::VANTAGE_VERSION;
+use vantage_types::invariant_spec::*;
+use vantage_types::intent::IntentInvariant;
+use vantage_types::symbol::SymbolKind;
 
-fn print_json_error(reason: FailureReason, message: &str, file: Option<&str>) {
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&json!({
-            "v": VANTAGE_VERSION,
-            "status": "error",
-            "reason": reason,
-            "message": message,
-            "file": file,
-    }))
-        .unwrap_or_default()
-    );
-}
+/// Walk a path and collect all recognized source files (deterministic order).
+fn collect_source_files(path: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
 
-/// Analyze a single file and output structural signals
-#[tracing::instrument(skip(path))]
-pub fn execute_verify_file(path: PathBuf, use_json: bool, enforce: bool) -> Result<()> {
-    let path_str = path.to_string_lossy().to_string();
-    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-
-    let lang = match Language::from_extension(ext) {
-        Some(l) => l,
-        None => {
-            if use_json {
-                print_json_error(
-                    FailureReason::UnsupportedLanguage,
-                    &format!("Unsupported file extension: {}", ext),
-                    Some(&path_str),
-                );
-        } else {
-                eprintln!("Error: Unsupported file extension: {}", ext);
-        }
-            std::process::exit(1);
-    }
-    };
-
-    if enforce {
-        return execute_enforce(path, lang, use_json);
+    if path.is_file() {
+        files.push(path.to_path_buf());
+        return files;
     }
 
-    let mut pipeline = match Pipeline::new(lang) {
-        Ok(p) => p,
-        Err(e) => {
-            if use_json {
-                print_json_error(FailureReason::InternalError, &e, Some(&path_str));
-        } else {
-                eprintln!("Error: {}", e);
-        }
-            std::process::exit(1);
-    }
-    };
-
-    let source = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) => {
-            if use_json {
-                print_json_error(
-                    FailureReason::FileReadError,
-                    &e.to_string(),
-                    Some(&path_str),
-                );
-        } else {
-                eprintln!("Error: Failed to read file: {}", e);
-        }
-            std::process::exit(1);
-    }
-    };
-
-    let result = pipeline.run(&source, &path_str);
-
-    if use_json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&json!({
-                "v": VANTAGE_VERSION,
-                "status": "ok",
-                "file": result.file,
-                "language": ext,
-                "signals": result.signals.iter().map(|s| json!({
-                    "type": format!("{:?}", s.symbol_kind).to_lowercase(),
-                    "id": s.symbol_id.to_string(),
-                    "line": s.location.start_line,
-                    "hash": s.structural_hash,
-                    "norm_hash": s.normalized_hash,
-            })).collect::<Vec<_>>(),
-                "claims": result.claims.iter().map(|c| json!({
-                    "type": format!("{:?}", c.claim_type).to_lowercase(),
-                    "label": format!("{:?}", c.label),
-                    "confidence": c.confidence,
-            })).collect::<Vec<_>>(),
-                "verdicts": result.verdicts,
-                "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
-                
-        }))?
-        );
-    } else {
-        println!("[*] File: {}", path_str);
-        println!("[*] Signals: {}", result.signals.len());
-        for sig in &result.signals {
-            println!(
-                "  - [{:?}] {} :: {}",
-                sig.symbol_kind,
-                sig.symbol_id,
-                &sig.structural_hash[..8]
-            );
-    }
-        println!("[*] Claims: {}", result.claims.len());
-        for claim in &result.claims {
-            println!(
-                "  - [{:?}] ({:.0}%)",
-                claim.claim_type,
-                claim.confidence * 100.0
-            );
-    }
-        println!("[*] Verdicts: {}", result.verdicts.len());
-        for verdict in &result.verdicts {
-            let symbol = match verdict.decision {
-                Decision::Allow => "OK",
-                Decision::Warn => "WARN",
-                Decision::Reject => "BLOCK",
-        };
-            println!("  [{}] {}", symbol, verdict.reason);
-    }
-        println!("[*] Duration: {}ms", result.duration_ms);
-    }
-
-    Ok(())
-}
-
-#[tracing::instrument(skip(path))]
-fn execute_enforce(path: PathBuf, lang: Language, use_json: bool) -> Result<()> {
-    let path_str = path.to_string_lossy().to_string();
-
-    let mut pipeline = Pipeline::new(lang).map_err(|e| anyhow::anyhow!(e))?;
-
-    // Add enforcement rules
-    pipeline.engine.add_rule(Box::new(InvariantRule {
-        name: "forbid_template_interpolation".to_string(),
-        claim_type: ClaimType::TemplateInterpolation,
-        decision: Decision::Warn,
-        reason: "Template interpolation detected - verify input sanitization".to_string(),
-    }));
-
-    let source = std::fs::read_to_string(&path).context("Failed to read file")?;
-    let result = pipeline.run(&source, &path_str);
-
-    if use_json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&json!({
-                "v": VANTAGE_VERSION,
-                "status": "ok",
-                "mode": "enforce",
-                "file": result.file,
-                "language": format!("{:?}", lang).to_lowercase(),
-                "signals": result.signals.len(),
-                "claims": result.claims.len(),
-                "verdicts": result.verdicts,
-                "final_decision": format!("{:?}", result.final_decision).to_lowercase(),
-                
-        }))?
-        );
-    } else {
-        println!(
-            "{}",
-            bold!(yellow!(
-                "🛡️  VANTAGE ENFORCEMENT PIPELINE (v1.2.4-ULTRA-LEAN)"
-            ))
-        );
-        println!("📁 File: {}", blue!(path_str));
-        println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-        println!(
-            "\n📡 Signals: {}",
-            yellow!(result.signals.len().to_string())
-        );
-        for sig in &result.signals {
-            println!(
-                "  └─ [{:?}] {} :: {}",
-                sig.symbol_kind,
-                green!(sig.symbol_id.to_string()),
-                cyan!(&sig.structural_hash[..8])
-            );
-    }
-
-        println!("\n🧠 Claims: {}", yellow!(result.claims.len().to_string()));
-        for claim in &result.claims {
-            println!(
-                "  └─ [{:?}] (confidence: {:.0}%)",
-                claim.claim_type,
-                claim.confidence * 100.0
-            );
-    }
-
-        println!("\n⚖️  Verdicts:");
-        for verdict in &result.verdicts {
-            let symbol = match verdict.decision {
-                Decision::Allow => green!("✅"),
-                Decision::Warn => yellow!("⚠️ "),
-                Decision::Reject => red!("🚫"),
-        };
-            println!("  {} [{:?}] {}", symbol, verdict.decision, verdict.reason);
-    }
-
-        let final_color = match result.final_decision {
-            Decision::Allow => bold!(green!("ALLOW")),
-            Decision::Warn => bold!(yellow!("WARN")),
-            Decision::Reject => bold!(red!("REJECT")),
-    };
-        println!("\n🏁 Final Decision: {}", final_color);
-
-        if result.final_decision == Decision::Reject {
-            std::process::exit(1);
-    }
-    }
-
-    Ok(())
-}
-
-/// Execute Seal intent to finalize structural baseline
-#[tracing::instrument(skip(path))]
-pub fn execute_seal(path: PathBuf) -> Result<()> {
-    println!(
-        "{}",
-        bold!(yellow!(
-            "🛡️  VANTAGE STRUCTURAL SEALING (v1.2.4-ULTRA-LEAN)"
-        ))
-    );
-    println!("📁 Target: {}", blue!(path.display().to_string()));
-    println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-    let mut map = Vec::new();
-    let walker = WalkBuilder::new(&path)
-        .hidden(false)
+    let walker = WalkBuilder::new(path)
+        .sort_by_file_path(|a, b| a.cmp(b))
         .git_ignore(true)
+        .git_global(true)
+        .hidden(true)
+        .filter_entry(|entry| {
+            let name = entry.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
+            !matches!(name, ".git" | "venv" | ".venv" | "node_modules" | "target" | "__pycache__" | ".pytest_cache" | ".mypy_cache" | "dist" | "build")
+        })
         .build();
 
     for entry in walker.flatten() {
         let p = entry.path();
         if p.is_file() {
-            let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
-            if ext == "rs" || ext == "py" {
-                let lang = match Language::from_extension(ext) {
-                    Some(l) => l,
-                    None => continue,
-            };
-                let mut pipe = match Pipeline::new(lang) {
-                    Ok(p) => p,
-                    Err(_) => continue,
-            };
-                let source = match std::fs::read_to_string(p) {
-                    Ok(s) => s,
-                    Err(_) => continue,
-            };
-                let rel_path = p
-                    .strip_prefix(&path)
-                    .unwrap_or(p)
-                    .to_string_lossy()
-                    .to_string();
-                let result = pipe.run(&source, &rel_path);
-                for sig in result.signals {
-                    map.push(json!({
-                        "f": rel_path,
-                        "s": sig.symbol_id.to_string(),
-                        "h": sig.structural_hash,
-                        "n": sig.normalized_hash,
-                }));
-            }
-        }
-    }
-    }
-
-    let ts = std::time::SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .context("Time drift detected")?
-        .as_secs();
-
-    let seal_data = json!({
-        "v": "1.2.4-ULTRA-LEAN",
-        "ts": ts,
-        "map": map,
-    });
-
-    let seal_path = path.join("VANTAGE.SEAL");
-    std::fs::write(&seal_path, serde_json::to_string_pretty(&seal_data)?)?;
-
-    println!("[OK] Forensic baseline established.");
-    println!("[*] Map contains {} structural signals.", map.len());
-    println!("[*] Written to: {}", seal_path.display());
-
-    Ok(())
-}
-
-/// Purge local forensic artifacts
-#[tracing::instrument]
-pub fn execute_purge(force: bool) -> Result<()> {
-    println!("[VANTAGE PURGE]");
-
-    if !force {
-        anyhow::bail!("Purge requires --force flag for safety.");
-    }
-
-    let seal_path = PathBuf::from("VANTAGE.SEAL");
-    if seal_path.exists() {
-        std::fs::remove_file(&seal_path)?;
-        println!("[*] Removed: {}", seal_path.display());
-    } else {
-        println!("[!] No forensic artifacts found to purge.");
-    }
-
-    println!("[*] Workspace is now clean.");
-    Ok(())
-}
-
-/// Diff current file against VANTAGE.SEAL baseline
-#[tracing::instrument(skip(path, seal_path))]
-pub fn execute_diff(path: PathBuf, seal_path: PathBuf, use_json: bool) -> Result<()> {
-    use vantage_core::parser::Language;
-    use vantage_core::DriftReport;
-
-    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-    let lang = Language::from_extension(ext)
-        .ok_or_else(|| anyhow::anyhow!("Unsupported file extension: {}", ext))?;
-
-    let source = std::fs::read_to_string(&path).context("Failed to read file")?;
-    let mut pipeline = Pipeline::new(lang).map_err(|e| anyhow::anyhow!(e))?;
-    let current_result = pipeline.run(&source, &path.to_string_lossy());
-
-    let seal_data = std::fs::read_to_string(&seal_path)
-        .context("VANTAGE.SEAL not found. Run 'vantage seal' first.")?;
-    let seal: serde_json::Value = serde_json::from_str(&seal_data)?;
-
-    let file_rel = path.file_name().unwrap_or_default().to_string_lossy();
-
-    let baseline_signals: Vec<vantage_core::CognitiveSignal> = seal["map"]
-        .as_array()
-        .unwrap_or(&Vec::new())
-        .iter()
-        .filter(|entry| entry["f"].as_str().is_some_and(|f| f.contains(&*file_rel)))
-        .filter_map(|entry| {
-            let sym_id = entry["s"].as_str()?.to_string();
-            let struct_hash = entry["h"].as_str()?.to_string();
-            let norm_hash = entry["n"].as_str()?.to_string();
-            Some(vantage_core::CognitiveSignal {
-                uuid: String::new(),
-                symbol_id: vantage_types::SymbolId::new(&sym_id),
-                parent: None,
-                symbol_kind: vantage_core::SymbolKind::Other("sealed".to_string()),
-                language: String::new(),
-                structural_hash: struct_hash,
-                semantic_hash: String::new(),
-                normalized_hash: norm_hash,
-                signature: None,
-                location: vantage_core::SourceLocation {
-                    file: String::new(),
-                    start_line: 0,
-                    start_col: 0,
-                    end_line: 0,
-                    end_col: 0,
-                    byte_start: 0,
-                    byte_end: 0,
-            },
-                metadata: std::collections::HashMap::new(),
-                origin: vantage_core::Origin {
-                    parser: String::new(),
-                    version: String::new(),
-            },
-                confidence: 1.0,
-        })
-    })
-        .collect();
-
-    let current_by_norm: std::collections::HashMap<String, &vantage_core::CognitiveSignal> =
-        current_result
-            .signals
-            .iter()
-            .map(|s| (s.normalized_hash.clone(), s))
-            .collect();
-
-    // Align baseline to current by matching normalized_hash
-    // If normalized_hash changed (e.g., due to logic update), still track the symbol
-    let mut aligned_baseline: Vec<vantage_core::CognitiveSignal> = Vec::new();
-
-    for baseline in &baseline_signals {
-        let mut b = baseline.clone();
-        if let Some(current) = current_by_norm.get(&baseline.normalized_hash) {
-            // Hash matches - use aligned data
-            b.structural_hash = baseline.structural_hash.clone();
-            b.location = current.location.clone();
-            b.symbol_id = current.symbol_id.clone();
-    } else {
-            // Hash differs (logic changed) - use current's location/symbol but keep baseline hash for comparison
-            // Find by symbol_id instead
-            if let Some(current) = current_result
-                .signals
-                .iter()
-                .find(|c| c.symbol_id == baseline.symbol_id)
-            {
-                b.location = current.location.clone();
-        }
-    }
-        aligned_baseline.push(b);
-    }
-
-    let report = DriftReport::compare(&aligned_baseline, &current_result.signals);
-
-    if use_json {
-        let mut output = serde_json::to_value(&report)?;
-        if let Some(obj) = output.as_object_mut() {
-            obj.insert("v".to_string(), json!(VANTAGE_VERSION));
-            let status = if report.structural_changes == 0 && report.added == 0 && report.removed == 0 {
-                "ok"
-        } else {
-                "drift"
-        };
-            obj.insert("status".to_string(), json!(status));
-    }
-        println!("{}", serde_json::to_string_pretty(&output)?);
-    } else {
-        println!("[VANTAGE DRIFT REPORT v1.2.4]");
-        println!("[*] File: {}", path.to_string_lossy());
-        println!("[*] Baseline: {}", seal_path.display());
-        println!();
-        println!("[*] Summary:");
-        println!("  Total symbols: {}", report.total_symbols);
-        println!("  Unchanged:    {}", report.unchanged);
-        println!("  Struct chg:  {}", report.structural_changes);
-        println!("  Added:       {}", report.added);
-        println!("  Removed:     {}", report.removed);
-
-        println!();
-        println!("[*] Details:");
-        for item in &report.items {
-            let (status_str, desc) = match item.status {
-                vantage_core::DriftStatus::Unchanged => ("OK", "unchanged"),
-                vantage_core::DriftStatus::StructuralChange => ("CHG", "structural change"),
-                vantage_core::DriftStatus::SemanticChange => ("SEM", "semantic change"),
-                vantage_core::DriftStatus::Added => ("+", "added"),
-                vantage_core::DriftStatus::Removed => ("-", "removed"),
-        };
-            println!(
-                "  [{}] {} @ {} - {}",
-                status_str,
-                item.symbol_id,
-                item.location,
-                desc
-            );
-    }
-
-        let has_changes = report.structural_changes > 0 || report.added > 0 || report.removed > 0;
-        if has_changes {
-            println!();
-            println!("[!] DRIFT DETECTED");
-    } else {
-            println!();
-            println!("[OK] NO DRIFT");
-    }
-    }
-
-    Ok(())
-}
-
-/// Executes the dependency graph extraction pipeline for a given file.
-///
-/// Employs Bipartite Identity resolution to map Merkle-CAF physical nodes
-/// to Logical Symbol edges without recomputing unchanged structures.
-#[tracing::instrument(skip_all, fields(target = %path.display()))]
-pub fn execute_graph(path: PathBuf, use_json: bool) -> Result<()> {
-    use std::time::Instant;
-    use tracing::info;
-
-    let start_time = Instant::now();
-    info!("Initializing forensic graph extraction pipeline...");
-
-    // 1. Pre-flight Validation
-    if !path.exists() {
-        anyhow::bail!(
-            "Forensic target not found. Path does not exist: {}",
-            path.display()
-        );
-    }
-
-    if !path.is_file() {
-        anyhow::bail!(
-            "Forensic target must be a file, found directory: {}",
-            path.display()
-        );
-    }
-
-    // 2. Core Engine Execution
-    let lang = Language::from_extension(path.extension().and_then(|s| s.to_str()).unwrap_or(""))
-        .ok_or_else(|| anyhow::anyhow!("Unsupported language"))?;
-
-    let mut parser =
-        vantage_core::parser::EpistemicParser::new_rust_parser().map_err(|e| anyhow::anyhow!(e))?;
-    if lang == Language::Python {
-        parser = vantage_core::parser::EpistemicParser::new_python_parser()
-            .map_err(|e| anyhow::anyhow!(e))?;
-    }
-
-    let source = std::fs::read_to_string(&path)?;
-    let (_, graph) = parser.parse_with_graph(&source, &path.to_string_lossy());
-    let dto = graph.to_dto();
-
-    let elapsed_micros = start_time.elapsed().as_micros();
-    info!("Graph extraction completed in {} µs", elapsed_micros);
-
-    // 3. Output Formatting
-    if use_json {
-        println!("{}", serde_json::to_string_pretty(&dto)?);
-    } else {
-        println!("{}", bold!(yellow!("🚀 Vantage Graph Extractor [Phase C]")));
-        println!("Target:  {}", blue!(path.display().to_string()));
-        println!("Status:  {}", green!("SUCCESS"));
-        println!("Nodes:   {}", yellow!(dto.nodes.len().to_string()));
-        println!("Latency: {} µs", elapsed_micros);
-
-    }
-    Ok(())
-}
-
-
-/// Execute performance benchmarks for incremental structural extraction
-#[tracing::instrument]
-pub fn execute_bench(iterations: usize) -> Result<()> {
-    use std::time::Instant;
-    use vantage_core::parser::EpistemicParser;
-
-    println!(
-        "{}",
-        bold!(yellow!("🚀 VANTAGE PERFORMANCE BENCHMARK (v1.2.4)"))
-    );
-    println!("⚙️  Iterations: {}", iterations);
-    println!("{}", dim!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
-
-    let source = r#"
-fn level_1() {
-    let a = 10;
-    let b = 20;
-    println!("a + b = {}", a + b);
-}
-
-struct Config {
-    val: i32,
-    name: String,
-}
-
-impl Config {
-    fn new() -> Self {
-        Self { val: 0, name: "default".to_string() }
-    }
-}
-"#;
-
-    let mut parser = EpistemicParser::new_rust_parser().map_err(|e| anyhow::anyhow!(e))?;
-
-    // Scenario 1: Initial Cold Parse
-    println!("\n📦 [{}]", blue!("SCENARIO 1: COLD START"));
-    let start = Instant::now();
-    let _ = parser.parse_signals(source, "bench.rs");
-    let duration = start.elapsed();
-    println!("  └─ Latency:   {:?}", duration);
-    println!("  └─ Recompute: {}", parser.metrics.nodes_recomputed);
-    println!("  └─ Max Depth: {}", parser.metrics.max_depth);
-
-    // Scenario 2: Identical Warm Parse (100% Cache)
-    println!("\n🔥 [{}]", green!("SCENARIO 2: IDENTICAL WARM PARSE"));
-    let mut total_duration = std::time::Duration::default();
-
-    for _ in 0..iterations {
-        let start = Instant::now();
-        let _ = parser.parse_signals(source, "bench.rs");
-        total_duration += start.elapsed();
-    }
-
-    let avg_latency = total_duration / (iterations as u32);
-    let last_reuse = parser.metrics.nodes_reused;
-    let total_nodes = parser.metrics.nodes_recomputed + parser.metrics.nodes_reused;
-    let reuse_ratio = (last_reuse as f64 / total_nodes as f64) * 100.0;
-
-    println!(
-        "  └─ Avg Latency: {:?} ({} iterations)",
-        avg_latency, iterations
-    );
-    println!("  └─ Nodes Reused: {}", last_reuse);
-    println!("  └─ Reuse Ratio: {:.2}%", reuse_ratio);
-
-    // Scenario 3: Literal Edit (O(depth) recompute)
-    println!("\n📝 [{}]", cyan!("SCENARIO 3: LITERAL VALUE EDIT"));
-    let modified_source = source.replace("let a = 10;", "let a = 99;");
-
-    let start = Instant::now();
-    let _ = parser.parse_signals(&modified_source, "bench.rs");
-    let duration = start.elapsed();
-
-    println!("  └─ Latency:   {:?}", duration);
-    println!("  └─ Recompute: {}", parser.metrics.nodes_recomputed);
-    println!("  └─ Target:    O(depth) verified");
-
-    println!("\n{}", bold!(green!("✅ BENCHMARK COMPLETE")));
-
-    Ok(())
-}
-
-#[tracing::instrument(skip_all, fields(list, capability, envelope, limits))]
-pub fn execute_introspect(
-    list: bool,
-    capability: Option<String>,
-    use_json: bool,
-    envelope: bool,
-    limits: bool,
-) -> Result<()> {
-    use vantage_core::CAPABILITY_REGISTRY;
-    use vantage_types::SystemEnvelope;
-
-    if envelope {
-        let env = SystemEnvelope::current();
-        if use_json {
-            println!("{}", serde_json::to_string_pretty(&env)?);
-    } else {
-            println!("{}", bold!(yellow!("📦 SYSTEM ENVELOPE")));
-            println!("  Version:           {}", env.version);
-            println!("  Safe Node Limit:   {}", env.safe_node_limit);
-            println!("  Nonlinear Boundary: {}", env.nonlinear_boundary);
-            println!("  Deterministic:     {}", env.deterministic);
-            println!("  Zero-Copy:         {}", env.zero_copy);
-            println!("  O(n log n) Guarantee: {}", env.o_n_log_n_guarantee);
-    }
-        return Ok(());
-    }
-
-    if limits {
-        let env = SystemEnvelope::current();
-        if use_json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&json!({
-                    "safe_node_limit": env.safe_node_limit,
-                    "nonlinear_boundary": env.nonlinear_boundary,
-            }))?
-            );
-    } else {
-            println!("{}", bold!(yellow!("⚡ PERFORMANCE LIMITS")));
-            println!("  Safe Node Limit:   {}", env.safe_node_limit);
-            println!("  Nonlinear Boundary: {}", env.nonlinear_boundary);
-    }
-        return Ok(());
-    }
-
-    if list {
-        let entries = CAPABILITY_REGISTRY.list();
-        if use_json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&json!({
-                    "v": VANTAGE_VERSION,
-                    "capabilities": entries.iter().map(|e| json!({
-                        "name": e.name,
-                        "inputs": e.inputs,
-                        "outputs": e.outputs,
-                })).collect::<Vec<_>>(),
-            }))?
-            );
-    } else {
-            println!("{}", bold!(yellow!("🔍 VANTAGE CAPABILITY REGISTRY")));
-            println!("[*] Total capabilities: {}\n", entries.len());
-            for e in entries {
-                println!("{}", bold!(cyan!(format!("▶ {}", e.name))));
-                println!("  ├─ Inputs:  {}", e.inputs.join(", "));
-                println!("  ├─ Outputs: {}", e.outputs.join(", "));
-                println!("  └─ Help:    {}\n", e.help);
-        }
-    }
-    } else if let Some(name) = capability {
-        if let Some(cap) = CAPABILITY_REGISTRY.get(&name) {
-            if use_json {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&json!({
-                        "v": VANTAGE_VERSION,
-                        "name": cap.name,
-                        "inputs": cap.inputs,
-                        "outputs": cap.outputs,
-                        "invariants": cap.invariants,
-                        "help": cap.help,
-                }))?
-                );
-        } else {
-                println!("{}", bold!(cyan!(format!("▶ {}", cap.name))));
-                println!("  Inputs:    {}", cap.inputs.join(", "));
-                println!("  Outputs:   {}", cap.outputs.join(", "));
-                println!("  Invariants:");
-                for inv in cap.invariants {
-                    println!("    - {}", inv);
-            }
-                println!("\n  Help: {}", cap.help);
-        }
-    } else {
-            if use_json {
-                print_json_error(
-                    FailureReason::InternalError,
-                    &format!("Capability '{}' not found", name),
-                    None,
-                );
-        } else {
-                eprintln!("Error: Capability '{}' not found", name);
-        }
-            std::process::exit(1);
-    }
-    } else {
-        if use_json {
-            print_json_error(
-                FailureReason::InternalError,
-                "Specify --list or --capability",
-                None,
-            );
-    } else {
-            eprintln!("Error: Specify --list or --capability <name>");
-    }
-        std::process::exit(1);
-    }
-
-    Ok(())
-}
-
-#[tracing::instrument(skip_all, fields(path = %path.display(), json, deep))]
-pub fn execute_verify(path: PathBuf, use_json: bool, deep: bool) -> Result<()> {
-    use crate::kit_integration::{verify_kit_memory, verify_deep, KitVerificationResult, DeepVerificationResult, check_kit_version};
-
-    // Deterministic Runtime Contract: Ensure Kit version matches Vantage expectation
-    check_kit_version(&path, "1.2.4")?;
-
-    if deep {
-        let result = verify_kit_memory(&path)?;
-        let deep_result = verify_deep(&path)?;
-
-        if use_json {
-            #[derive(Serialize)]
-            struct DeepOutput {
-                basic: KitVerificationResult,
-                deep: DeepVerificationResult,
-            }
-            let output = DeepOutput {
-                basic: result.clone(),
-                deep: deep_result.clone(),
-            };
-            println!("{}", serde_json::to_string_pretty(&output)?);
-        } else {
-            println!("Records scanned: {}", result.records_scanned);
-            println!();
-            println!("{}", bold!("Deep Verification:"));
-            println!("  Hash integrity:    {}", if result.integrity_ok { green!("OK") } else { red!("FAIL") });
-            println!("  Orphan nodes:   {}", if deep_result.orphan_count == 0 { green!("OK") } else { red!(deep_result.orphan_count.to_string()) });
-            println!("  Index check:    {}", if deep_result.index_ok { green!("OK") } else { red!("MISSING") });
-            println!("  SQLite health:   {}", if deep_result.sqlite_health { green!("OK") } else { red!("FAIL") });
-            println!();
-
-            let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
-            if overall_ok {
-                println!("{}", bold!(green!("✅ Overall: SAFE")));
-            } else {
-                println!("{}", bold!(red!("❌ Overall: UNSAFE")));
-            }
-        }
-
-        let overall_ok = result.integrity_ok && deep_result.orphan_count == 0 && deep_result.index_ok && deep_result.sqlite_health;
-        std::process::exit(if overall_ok { 0 } else { 2 });
-    } else {
-        let result = verify_kit_memory(&path)?;
-
-        if use_json {
-            println!("{}", serde_json::to_string_pretty(&result)?);
-        } else {
-            if result.integrity_ok {
-                println!("{}", bold!(green!("✅ INTEGRITY OK")));
-            } else {
-                println!("{}", bold!(red!("❌ INTEGRITY FAIL")));
-            }
-            println!("  Records scanned: {}", result.records_scanned);
-            println!("  Valid hashes:   {}", result.valid_hashes);
-            println!("  Invalid hashes: {}", result.invalid_hashes);
-            
-            if !result.errors.is_empty() {
-                println!("\n{}", bold!(red!("Errors:")));
-                for err in result.errors.iter().take(5) {
-                    println!("  - {}", err);
+            if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
+                if matches!(ext, "rs" | "py" | "rb" | "js" | "jsx" | "ts" | "tsx") {
+                    files.push(p.to_path_buf());
                 }
             }
         }
     }
 
-    Ok(())
+    files
 }
 
-/// Verify environment (Kit + Vantage contract)
-#[tracing::instrument(skip_all, fields(path = %path.display(), json))]
-pub fn execute_verify_env(path: PathBuf, use_json: bool) -> Result<()> {
-    use crate::kit_integration::verify_env;
-    
-    let status = verify_env(&path)?;
+/// Run: parse → normalize → optionally seal.
+pub fn execute_run(path: PathBuf, use_json: bool, dry_run: bool) -> Result<()> {
+    let files = collect_source_files(&path);
+
+    if files.is_empty() {
+        anyhow::bail!("No supported source files found");
+    }
+
+    let mut total_nodes = 0;
+    let mut results = Vec::new();
+
+    for file in &files {
+        let source = match std::fs::read_to_string(file) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        let mut normalizer = Normalizer::new();
+        let file_path = file.to_string_lossy().to_string();
+
+        match normalizer.run(&source, &file_path) {
+            Ok(graph) => {
+                let count = graph.nodes.len();
+                total_nodes += count;
+                results.push(json!({
+                    "file": file_path,
+                    "language": graph.source_language.as_str(),
+                    "nodes": count,
+                }));
+            }
+            Err(e) => {
+                if use_json {
+                    results.push(json!({
+                        "file": file_path,
+                        "error": e,
+                    }));
+                } else {
+                    eprintln!("  [!] {}: {}", file_path, e);
+                }
+            }
+        }
+    }
+
+    // Create seal unless dry_run
+    if !dry_run {
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("Time drift")?
+            .as_secs();
+
+        let seal_data = json!({
+            "v": VANTAGE_VERSION,
+            "ts": ts,
+            "files": results,
+            "total_nodes": total_nodes,
+        });
+
+        let seal_path = if path.is_dir() {
+            path.join("VANTAGE.SEAL")
+        } else {
+            path.parent().unwrap_or(Path::new(".")).join("VANTAGE.SEAL")
+        };
+
+        std::fs::write(&seal_path, serde_json::to_string_pretty(&seal_data)?)?;
+
+        if !use_json {
+            println!("{}", bold!(green!("🛡️  VANTAGE SEAL CREATED")));
+            println!("  Path:  {}", seal_path.display());
+        }
+    }
 
     if use_json {
-        println!("{}", serde_json::to_string_pretty(&status)?);
+        let output = json!({
+            "v": VANTAGE_VERSION,
+            "status": "ok",
+            "files": results,
+            "total_nodes": total_nodes,
+            "sealed": !dry_run,
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
     } else {
-        println!("{}", bold!(yellow!("🛡️  VANTAGE ENVIRONMENT VERIFICATION")));
-        println!("  Kit Initialized:   {}", if status.kit_init { green!("YES") } else { red!("NO") });
-        println!("  Database Healthy:  {}", if status.database_ok { green!("OK") } else { red!("ERROR") });
-        println!("  Kit Version:       {}", if status.version == "1.2.4" { green!(&status.version) } else { yellow!(&status.version) });
-        
-        if status.version != "1.2.4" {
-            println!("\n{}", yellow!("⚠️  Warning: Version mismatch. Recommended: 1.2.4"));
+        println!("{}", bold!(yellow!("🔍 VANTAGE STRUCTURAL RUN")));
+        println!("  Target: {}", path.display());
+        println!("  Files:  {}", files.len());
+        println!("  Nodes:  {}", total_nodes);
+        if dry_run {
+            println!("  Mode:   {}", cyan!("dry-run (no seal)"));
+        } else {
+            println!("  Mode:   {}", green!("sealed"));
         }
     }
 
     Ok(())
 }
 
-/// Explicitly sync Kit memory to Vantage graph baseline
-#[tracing::instrument(skip_all, fields(path = %path.display()))]
-pub fn execute_sync_kit(path: PathBuf) -> Result<()> {
-    use crate::kit_integration::check_kit_version;
-    
-    println!("{}", bold!(yellow!("🔄 SYNCING KIT MEMORY → VANTAGE GRAPH")));
-    
-    // 1. Guard: Version Check
-    check_kit_version(&path, "1.2.4")?;
-    
-    // 2. Perform Alignment (Currently placeholder for full Scale 3 implementation)
-    println!("[*] Aligning identities...");
-    println!("[OK] Identity bridge established (Scale 2 Explicit).");
-    
+/// Graph: extract and output the unified dependency graph.
+pub fn execute_graph(path: PathBuf) -> Result<()> {
+    let files = collect_source_files(&path);
+
+    if files.is_empty() {
+        anyhow::bail!("No supported source files found");
+    }
+
+    let mut all_nodes = Vec::new();
+
+    for file in &files {
+        let source = match std::fs::read_to_string(file) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+
+        let mut normalizer = Normalizer::new();
+        let file_path = file.to_string_lossy().to_string();
+
+        if let Ok(graph) = normalizer.run(&source, &file_path) {
+            all_nodes.extend(graph.nodes);
+        }
+    }
+
+    all_nodes.sort_by(|a, b| a.language.as_str().cmp(b.language.as_str()).then(a.fq_name.cmp(&b.fq_name)));
+
+    let output = json!({
+        "v": VANTAGE_VERSION,
+        "status": "ok",
+        "total_nodes": all_nodes.len(),
+        "nodes": all_nodes,
+    });
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
 }
 
-#[tracing::instrument(skip_all, fields(path = %path.display()))]
-pub fn execute_benchmark(path: &Path) -> Result<()> {
-    use crate::kit_integration::benchmark;
-
-    let result = benchmark(path)?;
-
-    println!("{}", bold!("Benchmark Results:"));
-    println!("  Records:      {}", result.records);
-    println!("  Time:         {:.2} ms", result.time_ms);
-    println!("  Speed:        {:.0} records/sec", result.records_per_sec);
-
-    Ok(())
+/// Built-in default invariants for common architectural guarantees.
+fn default_invariants() -> Vec<InvariantSpec> {
+    vec![
+        InvariantSpec {
+            id: "global-has-struct".to_string(),
+            description: "Graph must contain at least one Struct node".to_string(),
+            rule: InvariantRule::RequiredKind(SymbolKind::Struct),
+            scope: InvariantScope::Global,
+        },
+        InvariantSpec {
+            id: "global-has-function".to_string(),
+            description: "Graph must contain at least one Function node".to_string(),
+            rule: InvariantRule::RequiredKind(SymbolKind::Function),
+            scope: InvariantScope::Global,
+        },
+        InvariantSpec {
+            id: "global-hash-stable".to_string(),
+            description: "All nodes must have a non-empty structural hash".to_string(),
+            rule: InvariantRule::HashStability,
+            scope: InvariantScope::Global,
+        },
+    ]
 }
 
-/// Execute dependency edges extraction
-#[tracing::instrument(skip(path))]
-pub fn execute_extract_edges(path: PathBuf) -> Result<()> {
-    vantage_core::extractor::pipeline::run(&path)
+/// Verify: check seal integrity, run invariants, detect drift.
+pub fn execute_verify(path: PathBuf, use_json: bool, _deep: bool) -> Result<()> {
+    // Locate seal file
+    let seal_path = if path.is_dir() {
+        path.join("VANTAGE.SEAL")
+    } else {
+        path.parent().unwrap_or(Path::new(".")).join("VANTAGE.SEAL")
+    };
+
+    if !seal_path.exists() {
+        anyhow::bail!(
+            "No VANTAGE.SEAL found at {}. Run 'kit-vantage run' first.",
+            seal_path.display()
+        );
+    }
+
+    let seal_data = std::fs::read_to_string(&seal_path)
+        .context("Failed to read seal file")?;
+    let seal: serde_json::Value = serde_json::from_str(&seal_data)?;
+
+    // Re-run structural analysis on the same target
+    let files = collect_source_files(&path);
+    let mut all_nodes = Vec::new();
+    let mut errors = Vec::new();
+
+    for file in &files {
+        let source = match std::fs::read_to_string(file) {
+            Ok(s) => s,
+            Err(e) => {
+                errors.push(format!("{}: {}", file.display(), e));
+                continue;
+            }
+        };
+
+        let mut normalizer = Normalizer::new();
+        let file_path = file.to_string_lossy().to_string();
+
+        match normalizer.run(&source, &file_path) {
+            Ok(graph) => all_nodes.extend(graph.nodes),
+            Err(e) => errors.push(format!("{}: {}", file_path, e)),
+        }
+    }
+
+    let current_nodes = all_nodes.len();
+    let baseline_nodes = seal["total_nodes"].as_u64().unwrap_or(0) as usize;
+    let drift = if current_nodes != baseline_nodes || !errors.is_empty() {
+        "drift"
+    } else {
+        "ok"
+    };
+
+    // Create a unified graph for invariant validation
+    let combined_graph = vantage_types::uir::UnifiedGraph {
+        nodes: all_nodes,
+        source_language: vantage_types::uir::Language::Rust,
+    };
+    let invariants = default_invariants();
+    let inv_report = engine::validate_invariants(&combined_graph, &invariants);
+
+    if use_json {
+        let output = json!({
+            "v": VANTAGE_VERSION,
+            "status": drift,
+            "baseline_nodes": baseline_nodes,
+            "current_nodes": current_nodes,
+            "errors": errors,
+            "invariants": {
+                "total": inv_report.total,
+                "passed": inv_report.passed,
+                "failed": inv_report.failed,
+                "results": inv_report.results.iter().map(|r| json!({
+                    "spec_id": r.spec_id,
+                    "passed": r.passed,
+                    "message": r.message,
+                })).collect::<Vec<_>>(),
+            },
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        println!("{}", bold!(yellow!("🛡️  VANTAGE VERIFY")));
+        println!("  Seal:    {}", seal_path.display());
+        println!("  Baseline: {} nodes", baseline_nodes);
+        println!("  Current:  {} nodes", current_nodes);
+
+        if drift == "drift" {
+            println!("  Status:  {}", red!("DRIFT DETECTED"));
+        } else {
+            println!("  Status:  {}", green!("INTEGRITY OK"));
+        }
+
+        // Invariant report
+        println!();
+        println!("{}", bold!("📋 INVARIANT REPORT"));
+        println!("  Total: {} | Passed: {} | Failed: {}",
+            inv_report.total, green!(inv_report.passed.to_string()), red!(inv_report.failed.to_string()));
+        for r in &inv_report.results {
+            let icon = if r.passed { green!("✓") } else { red!("✗") };
+            println!("  {} [{}] {} - {}", icon, r.spec_id, r.message, bold!(dim!("")));
+        }
+
+        if !errors.is_empty() {
+            println!();
+            println!("  Errors: {}", errors.len());
+            for e in &errors {
+                println!("    - {}", e);
+            }
+        }
+    }
+
+    Ok(())
 }

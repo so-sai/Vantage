@@ -1,4 +1,4 @@
-# AGENT BOOTLOADER v1.2.4
+# AGENT BOOTLOADER v1.2.5
 
 AUTHORITY:
 kit runtime is source of truth

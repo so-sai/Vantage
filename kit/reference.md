@@ -1,6 +1,6 @@
-# .kit Reference Guide (v1.2.3 STABLE)
+# .kit Reference Guide (v1.2.5 RELEASE)
 
-This guide documents the active CLI and Python API surface for `.kit` v1.2.3.
+This guide documents the active CLI and Python API surface for `.kit` v1.2.5.
 Use this file when an agent needs exact command syntax after reading [../AGENTS.md](../AGENTS.md), [architecture.md](architecture.md), and [playbook.md](playbook.md).
 
 ## Runtime Support
@@ -278,4 +278,4 @@ Vantage v1.2.4 is currently in **EXPERIMENTAL MODE** to allow for AI forensic te
 
 ---
 
-*Last Updated: 2026-04-02 | Version: v1.2.4-EXPERIMENTAL | Status: RESEARCH*
+*Last Updated: 2026-05-14 | Version: v1.2.5-RELEASE | Status: PRODUCTION*

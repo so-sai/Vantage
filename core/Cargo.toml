@@ -1,6 +1,6 @@
 [package]
 name = "vantage-core"
-version = "1.2.4"
+version = "1.2.5"
 edition = "2024"
 description = "Vantage Structural Sensor - CLI single-shot executable for code abstraction"
 license = "MIT OR Apache-2.0"

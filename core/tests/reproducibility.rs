@@ -27,7 +27,7 @@ class Sub(Base):
     // Function to run extraction and return hash of output
     let run_extraction = || {
         let output = Command::new("cargo")
-            .args(["run", "--package", "vantage-cli", "--", "extract-edges"])
+            .args(["run", "--package", "vantage-cli", "--", "graph"])
             .arg(examples_dir.to_str().unwrap())
             .output()
             .expect("Failed to run vantage-cli");

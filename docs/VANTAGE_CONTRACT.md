@@ -1,4 +1,4 @@
-# VANTAGE MASTER CONTRACT (v1.2.4)
+# VANTAGE MASTER CONTRACT (v1.2.5)
 
 > **CANONICAL AUTHORITY** for all structural sensors, agents, and CI interactions.
 > Vantage is a **stateless structural sensor** providing deterministic code identity.
@@ -14,24 +14,18 @@ Vantage maps physical source code (L0) to structural symbols (L2) using a triple
 Vantage is invoked as a single-shot binary with no runtime dependencies.
 
 ```bash
-vantage <command> [args] [--json]
+kit-vantage <command> [args] [--json]
 ```
 
 ### Commands:
-- `verify <file> [--enforce (EXP)]`: Parse source, extract signals, run pipeline.
-- `graph <file> (EXP)`: Extract dependency edges (calls, imports).
-- `diff <file> [--seal .] (EXP)`: Compare against `VANTAGE.SEAL` baseline.
-- `seal <path> (EXP)`: Create forensic baseline for a directory.
-- `purge --force (EXP)`: Remove local forensic artifacts.
-
-> [!CAUTION]
-> **EXPERIMENTAL MODE ACTIVE (v1.2.4-EXPERIMENTAL)**
-> Modules marked with `(EXP)` are operational but unverified on large-scale repositories. AI Agents must treat outputs as forensic evidence requiring high-level reasoning.
+- `run <path>`: Parse source, normalize, and seal.
+- `graph <path>`: Extract the unified dependency graph.
+- `verify <path>`: Check seal integrity and drift.
 
 ---
 
 ## 3. OUTPUT MODEL (JSON)
-Every JSON output root contains `"v": "1.2.4"` and a `"status"` field.
+Every JSON output root contains `"v": "1.2.5"` and a `"status"` field.
 
 ### CognitiveSignal Schema:
 | Field | Type | Description |
@@ -88,15 +82,16 @@ AI Agents (like Antigravity) MUST adhere to these protocols when interacting wit
 
 ---
 
-## 6. EXPERIMENTAL MODULES & AI TESTING
+## 6. STABLE MODULES & AGENT PROTOCOL
 
-### Experimental Status (v1.2.4)
+### Module Status (v1.2.5)
 - **Verify**: STABLE. Core structural extraction is locked.
-- **Graph/Diff/Seal**: EXPERIMENTAL. These modules are open for AI testing in v1.2.4 to gather friction data for the next release.
+- **Graph/Diff/Seal**: STABLE. Deterministic ordering and schema parity enforced.
+- **Verify-Memory**: STABLE. Production integration with Kit SQLite.
 
-### AI Reasoning Protocol (v1.2.4-EXPERIMENTAL)
+### AI Reasoning Protocol (v1.2.5)
 1. **Evidence over Truth**: AI agents must not assume a `vantage` output is the final "Ground Truth". Use it as a structural signal to inform your next research step.
-2. **False Positives**: Be prepared for noise in `diff` and `graph` outputs. If a signal contradicts your source code reading, log the friction using `kit learn --kind note --tag decision`.
+2. **Deterministic Parity**: Any drift in `normalized_hash` between runs is a CRITICAL FAILURE and must be reported.
 
 ---
 
@@ -108,11 +103,11 @@ AI Agents (like Antigravity) MUST adhere to these protocols when interacting wit
 
 ---
 
-## 8. TECHNICAL RELEASE SUMMARY (v1.2.4)
+## 8. TECHNICAL RELEASE SUMMARY (v1.2.5)
 
 ### 🧠 Định nghĩa một câu
 
-**Vantage v1.2.4 = Production-ready Memory Integrity Engine (Rust 2024) cho hệ thống Kit.**
+**Vantage v1.2.5 = Production-ready Memory Integrity Engine (Rust 2024) cho hệ thống Kit.**
 
 Không phải CLI phụ.
 Không phải tool debug.
@@ -152,7 +147,7 @@ Mapping rõ:
 
 ---
 
-### 🏗️ Kiến trúc nội bộ Vantage v1.2.4
+### 🏗️ Kiến trúc nội bộ Vantage v1.2.5
 
 #### Core Pipeline
 
@@ -366,7 +361,7 @@ Rất đúng thiết kế.
 
 ---
 
-### 🔄 Migration Capability (v1.2.3 → v1.2.4)
+### 🔄 Migration Capability (v1.2.3 → v1.2.5)
 
 Đã hoàn thành:
 
@@ -503,7 +498,7 @@ performance sanity
 
 ---
 
-### 📍 Vantage v1.2.4 — Capability Matrix
+### 📍 Vantage v1.2.5 — Capability Matrix
 
 | Capability                   | Status |
 | ---------------------------- | ------ |
@@ -567,7 +562,7 @@ no orphan nodes allowed
 
 #### Một câu kỹ thuật
 
-> **Vantage v1.2.4 là một Rust-based deterministic memory integrity engine hoạt động ở chế độ read-only trên SQLite truth layer của Kit.**
+> **Vantage v1.2.5 là một Rust-based deterministic memory integrity engine hoạt động ở chế độ read-only trên SQLite truth layer của Kit.**
 
 ---
 
@@ -591,4 +586,4 @@ Mà là:
 
 ---
 
-*v1.2.4 — EXPERIMENTAL MODE ENABLED. Single Source of Truth Under Stress Test.*
+*v1.2.5 — EXPERIMENTAL MODE ENABLED. Single Source of Truth Under Stress Test.*

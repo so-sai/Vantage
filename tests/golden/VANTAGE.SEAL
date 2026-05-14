@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "file": "tests\\golden\\rust_sample.rs",
+      "language": "rust",
+      "nodes": 5
+    }
+  ],
+  "total_nodes": 5,
+  "ts": 1778744640,
+  "v": "1.2.5"
+}
