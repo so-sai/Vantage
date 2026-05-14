@@ -34,6 +34,12 @@ fn collect_files(dir: &Path) -> Vec<PathBuf> {
         .git_global(false)
         .git_exclude(false)
         .hidden(false)
+        .follow_links(false)
+        .max_depth(Some(32))
+        .filter_entry(|entry| {
+            let name = entry.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
+            !matches!(name, ".git" | "venv" | ".venv" | "node_modules" | "target" | "__pycache__" | "dist" | "build" | "vendor" | "coverage")
+        })
         .build();
 
     for entry in walker.flatten() {

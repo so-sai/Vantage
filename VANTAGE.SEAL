@@ -3,7 +3,7 @@
     {
       "file": ".\\cli\\src\\dispatch.rs",
       "language": "rust",
-      "nodes": 203
+      "nodes": 267
     },
     {
       "file": ".\\cli\\src\\kit_integration.rs",
@@ -13,7 +13,7 @@
     {
       "file": ".\\cli\\src\\main.rs",
       "language": "rust",
-      "nodes": 19
+      "nodes": 20
     },
     {
       "file": ".\\cli\\src\\term.rs",
@@ -24,16 +24,6 @@
       "file": ".\\core\\src\\analytics.rs",
       "language": "rust",
       "nodes": 19
-    },
-    {
-      "file": ".\\core\\src\\bin\\proof_o_depth.rs",
-      "language": "rust",
-      "nodes": 79
-    },
-    {
-      "file": ".\\core\\src\\bin\\vantage-verify.rs",
-      "language": "rust",
-      "nodes": 113
     },
     {
       "file": ".\\core\\src\\cognition\\claim.rs",
@@ -113,7 +103,7 @@
     {
       "file": ".\\core\\src\\extractor\\walker.rs",
       "language": "rust",
-      "nodes": 27
+      "nodes": 33
     },
     {
       "file": ".\\core\\src\\fingerprint\\hasher.rs",
@@ -228,7 +218,7 @@
     {
       "file": ".\\core\\tests\\golden_repos.rs",
       "language": "rust",
-      "nodes": 470
+      "nodes": 480
     },
     {
       "file": ".\\core\\tests\\repos\\mixed_system\\api\\__init__.py",
@@ -526,7 +516,7 @@
       "nodes": 6
     }
   ],
-  "total_nodes": 5594,
-  "ts": 1778747478,
+  "total_nodes": 5483,
+  "ts": 1778778703,
   "v": "1.2.5"
 }

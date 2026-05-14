@@ -36,8 +36,17 @@ const EXIT_ERROR: i32 = 10;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+const MAX_DEPTH: usize = 32;
+const MAX_FILES: usize = 50000;
+const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+
+/// Collect recognized source files with traversal safety bounds.
+/// Prevents runaway traversal, symlink loops, and large-binary explosions.
 fn collect_source_files(path: &Path) -> Vec<PathBuf> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     let mut files = Vec::new();
+    let file_count = AtomicUsize::new(0);
 
     if path.is_file() {
         files.push(path.to_path_buf());
@@ -48,21 +57,68 @@ fn collect_source_files(path: &Path) -> Vec<PathBuf> {
         .sort_by_file_path(|a, b| a.cmp(b))
         .git_ignore(true)
         .git_global(true)
+        .git_exclude(true)
         .hidden(true)
+        .follow_links(false)             // CRITICAL: no symlink traversal
+        .max_depth(Some(MAX_DEPTH))      // bounded depth
         .filter_entry(|entry| {
             let name = entry.path().file_name().and_then(|n| n.to_str()).unwrap_or("");
-            !matches!(name, ".git" | "venv" | ".venv" | "node_modules" | "target" | "__pycache__" | ".pytest_cache" | ".mypy_cache" | "dist" | "build")
+
+            // Ignore common CI-killer directories
+            if matches!(name,
+                ".git" | "venv" | ".venv" | "node_modules" | "target"
+                | "__pycache__" | ".pytest_cache" | ".mypy_cache"
+                | "dist" | "build" | ".build" | "vendor" | "coverage"
+                | ".next" | ".nuxt" | "out" | "bin" | "obj"
+                | "packages" | ".cargo" | ".rustup"
+                | ".terraform" | ".serverless"
+            ) {
+                return false;
+            }
+
+            // Skip hidden directories that are not allowed by hidden(false)
+            // Hmm, actually .hidden(true) handles this. But binary/generated dirs need explicit skip.
+            // Filter by entry type: skip non-file entries that look like generated data
+            if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                // Allow standard source directories
+                return !name.starts_with('.');
+            }
+
+            true
         })
         .build();
 
-    for entry in walker.flatten() {
-        let p = entry.path();
-        if p.is_file() {
-            if let Some(ext) = p.extension().and_then(|s| s.to_str()) {
-                if matches!(ext, "rs" | "py" | "rb" | "js" | "jsx" | "ts" | "tsx") {
-                    files.push(p.to_path_buf());
-                }
-            }
+    for result in walker {
+        // Hard file count limit — prevents OOM on massive repos
+        if file_count.load(Ordering::Relaxed) >= MAX_FILES {
+            break;
+        }
+
+        let entry = match result {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        let p = entry.path().to_path_buf();
+
+        // Skip non-files
+        if !p.is_file() {
+            continue;
+        }
+
+        // Skip oversized files (binary assets, archives, etc.)
+        if std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0) > MAX_FILE_SIZE {
+            continue;
+        }
+
+        let ext = match p.extension().and_then(|s| s.to_str()) {
+            Some(e) => e,
+            None => continue,
+        };
+
+        if matches!(ext, "rs" | "py" | "rb" | "js" | "jsx" | "ts" | "tsx") {
+            file_count.fetch_add(1, Ordering::Relaxed);
+            files.push(p);
         }
     }
 
