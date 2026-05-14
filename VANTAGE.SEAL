@@ -21,11 +21,6 @@
       "nodes": 0
     },
     {
-      "file": ".\\core\\failing_source.rs",
-      "language": "rust",
-      "nodes": 0
-    },
-    {
       "file": ".\\core\\src\\analytics.rs",
       "language": "rust",
       "nodes": 19
@@ -184,11 +179,6 @@
       "file": ".\\core\\src\\tirl.rs",
       "language": "rust",
       "nodes": 61
-    },
-    {
-      "file": ".\\core\\test_sample.rs",
-      "language": "rust",
-      "nodes": 10
     },
     {
       "file": ".\\core\\tests\\benchmark_suite.rs",
@@ -356,11 +346,6 @@
       "nodes": 5
     },
     {
-      "file": ".\\core\\v1_2_4_seal.rs",
-      "language": "rust",
-      "nodes": 5
-    },
-    {
       "file": ".\\examples\\python\\simple.py",
       "language": "python",
       "nodes": 1
@@ -379,16 +364,6 @@
       "file": ".\\examples\\smoke_test.py",
       "language": "python",
       "nodes": 0
-    },
-    {
-      "file": ".\\test_integrity.py",
-      "language": "python",
-      "nodes": 0
-    },
-    {
-      "file": ".\\test_python_complex.py",
-      "language": "python",
-      "nodes": 5
     },
     {
       "file": ".\\tests\\golden\\drift\\baseline.rs",
@@ -551,7 +526,7 @@
       "nodes": 6
     }
   ],
-  "total_nodes": 5614,
-  "ts": 1778744727,
+  "total_nodes": 5594,
+  "ts": 1778747478,
   "v": "1.2.5"
 }
