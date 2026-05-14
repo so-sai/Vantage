@@ -1,9 +1,10 @@
 //! # Vantage CLI (v1.2.5)
 //!
-//! Three commands, no clutter.
+//! Three commands + CI mode for machine-oriented invocation.
 //!   run     — parse → normalize → seal
 //!   graph   — extract + output unified dependency graph
-//!   verify  — seal integrity + drift detection
+//!   verify  — seal integrity + drift + invariants
+//!   --ci    — stable JSON contract for automation/agents
 
 mod dispatch;
 mod kit_integration;
@@ -28,9 +29,9 @@ enum Commands {
     Run {
         /// Path to file or directory
         path: PathBuf,
-        /// Output results in JSON format
+        /// Machine-oriented output: stable JSON, no ANSI, deterministic exit codes
         #[arg(long)]
-        json: bool,
+        ci: bool,
         /// Skip seal creation (parse + normalize only)
         #[arg(long)]
         dry_run: bool,
@@ -39,19 +40,24 @@ enum Commands {
     Graph {
         /// Path to file or directory
         path: PathBuf,
+        /// Machine-oriented output: stable JSON, no ANSI, deterministic exit codes
+        #[arg(long)]
+        ci: bool,
     },
-    /// Verify seal integrity and detect structural drift.
+    /// Verify seal integrity, run invariants, detect drift.
     Verify {
         /// Path to file or directory (defaults to current directory)
         #[arg(default_value = ".")]
         path: PathBuf,
-        /// Output in JSON format
-        #[arg(long, short = 'j')]
-        json: bool,
+        /// Machine-oriented output: stable JSON, no ANSI, deterministic exit codes
+        #[arg(long)]
+        ci: bool,
         /// Deep verification with baseline comparison
         #[arg(long, short = 'd')]
         deep: bool,
     },
+    /// List all capabilities this version supports (machine-readable JSON).
+    Capabilities,
 }
 
 fn main() -> Result<()> {
@@ -66,14 +72,17 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Run { path, json, dry_run } => {
-            dispatch::execute_run(path, json, dry_run)
+        Commands::Run { path, ci, dry_run } => {
+            dispatch::execute_run(path, ci, dry_run)
         }
-        Commands::Graph { path } => {
-            dispatch::execute_graph(path)
+        Commands::Graph { path, ci } => {
+            dispatch::execute_graph(path, ci)
         }
-        Commands::Verify { path, json, deep } => {
-            dispatch::execute_verify(path, json, deep)
+        Commands::Verify { path, ci, deep } => {
+            dispatch::execute_verify(path, ci, deep)
+        }
+        Commands::Capabilities => {
+            dispatch::execute_capabilities()
         }
     }
 }
