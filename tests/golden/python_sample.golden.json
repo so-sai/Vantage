@@ -1,8 +1,8 @@
-﻿{
+{
   "nodes": [
     {
       "dependencies": [],
-      "file": "tests\\golden\\python_sample.py",
+      "file": "tests/golden/python_sample.py",
       "fq_name": "process_data",
       "id": "process_data",
       "kind": "function",
@@ -14,7 +14,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\python_sample.py",
+      "file": "tests/golden/python_sample.py",
       "fq_name": "DataProcessor",
       "id": "DataProcessor",
       "kind": "class",
@@ -26,7 +26,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\python_sample.py",
+      "file": "tests/golden/python_sample.py",
       "fq_name": "__init__",
       "id": "__init__",
       "kind": "function",
@@ -38,7 +38,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\python_sample.py",
+      "file": "tests/golden/python_sample.py",
       "fq_name": "scale",
       "id": "scale",
       "kind": "function",

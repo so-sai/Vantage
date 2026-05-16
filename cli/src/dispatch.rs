@@ -179,7 +179,7 @@ pub fn execute_run(path: PathBuf, ci: bool, dry_run: bool) -> Result<()> {
         };
 
         let mut normalizer = Normalizer::new();
-        let file_path = file.to_string_lossy().to_string();
+        let file_path = file.to_string_lossy().replace('\\', "/");
 
         match normalizer.run(&source, &file_path) {
             Ok(graph) => {
@@ -272,7 +272,7 @@ pub fn execute_graph(path: PathBuf, ci: bool) -> Result<()> {
         };
 
         let mut normalizer = Normalizer::new();
-        let file_path = file.to_string_lossy().to_string();
+        let file_path = file.to_string_lossy().replace('\\', "/");
 
         if let Ok(graph) = normalizer.run(&source, &file_path) {
             all_nodes.extend(graph.nodes);
@@ -334,7 +334,7 @@ pub fn execute_verify(path: PathBuf, ci: bool, _deep: bool) -> Result<()> {
         };
 
         let mut normalizer = Normalizer::new();
-        let file_path = file.to_string_lossy().to_string();
+        let file_path = file.to_string_lossy().replace('\\', "/");
 
         match normalizer.run(&source, &file_path) {
             Ok(graph) => all_nodes.extend(graph.nodes),

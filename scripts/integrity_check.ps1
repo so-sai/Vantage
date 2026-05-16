@@ -9,8 +9,11 @@ Write-Host "[VANTAGE] 🛡️ Starting Semantic Integrity Enforcement (v1.2.5)..
 
 # 1. Determinism Guard (Zero-Side-Effect Check)
 Write-Host "[VANTAGE] Gate 1: Determinism Guard..."
-& $VANTAGE_BIN graph $RUST_SAMPLE | Out-File -Encoding UTF8 out1.json
-& $VANTAGE_BIN graph $RUST_SAMPLE | Out-File -Encoding UTF8 out2.json
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+$out1 = & $VANTAGE_BIN graph $RUST_SAMPLE
+[System.IO.File]::WriteAllText("out1.json", ($out1 -join "`n") + "`n", $Utf8NoBom)
+$out2 = & $VANTAGE_BIN graph $RUST_SAMPLE
+[System.IO.File]::WriteAllText("out2.json", ($out2 -join "`n") + "`n", $Utf8NoBom)
 
 $File1 = Get-Content out1.json -Raw
 $File2 = Get-Content out2.json -Raw
@@ -38,7 +41,7 @@ function Verify-Golden($file, $golden) {
         Write-Host "[OK] Golden match: $file" -ForegroundColor Green
     } else {
         Write-Host "[FAIL] Schema drift detected in $file!" -ForegroundColor Red
-        $currentStr | Out-File -Encoding UTF8 current_drift.json
+        [System.IO.File]::WriteAllText("current_drift.json", $currentStr, $Utf8NoBom)
         & git diff --no-index $golden current_drift.json
         Remove-Item current_drift.json
         exit 1
@@ -51,7 +54,7 @@ Verify-Golden $PY_SAMPLE "tests\golden\python_sample.golden.json"
 # 3. Seal & Drift Enforcement (Hard Lockdown)
 Write-Host "[VANTAGE] Gate 3: Seal & Drift Enforcement..."
 # Compare workspace against committed VANTAGE.SEAL
-$Report = & $VANTAGE_BIN verify . --json | ConvertFrom-Json
+$Report = & $VANTAGE_BIN verify . --ci | ConvertFrom-Json
 
 if ($Report.status -eq "ok") {
     Write-Host "[OK] Seal integrity verified (0% drift)." -ForegroundColor Green

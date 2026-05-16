@@ -1,8 +1,8 @@
-﻿{
+{
   "nodes": [
     {
       "dependencies": [],
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/rust_sample.rs",
       "fq_name": "fn",
       "id": "fn",
       "kind": "function",
@@ -14,7 +14,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/rust_sample.rs",
       "fq_name": "call_expression",
       "id": "call_expression",
       "kind": {
@@ -28,7 +28,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/rust_sample.rs",
       "fq_name": "call_expression",
       "id": "call_expression",
       "kind": {
@@ -42,7 +42,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/rust_sample.rs",
       "fq_name": "struct",
       "id": "struct",
       "kind": "struct",
@@ -54,7 +54,7 @@
     },
     {
       "dependencies": [],
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/rust_sample.rs",
       "fq_name": "const",
       "id": "const",
       "kind": {

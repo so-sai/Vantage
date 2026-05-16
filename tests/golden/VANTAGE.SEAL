@@ -1,12 +1,27 @@
 {
   "files": [
     {
-      "file": "tests\\golden\\rust_sample.rs",
+      "file": "tests/golden/drift/baseline.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "tests/golden/drift/current.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "tests/golden/python_sample.py",
+      "language": "python",
+      "nodes": 4
+    },
+    {
+      "file": "tests/golden/rust_sample.rs",
       "language": "rust",
       "nodes": 5
     }
   ],
-  "total_nodes": 5,
-  "ts": 1778744640,
+  "total_nodes": 15,
+  "ts": 1778896451,
   "v": "1.2.5"
 }
