@@ -44,7 +44,7 @@ verify_golden $PY_SAMPLE "tests/golden/python_sample.golden.json"
 
 # 3. Seal & Drift Enforcement
 echo "[VANTAGE] Gate 3: Seal & Drift Enforcement..."
-$VANTAGE_BIN verify . --json > drift_report.json
+$VANTAGE_BIN verify . --ci > drift_report.json
 STATUS=$(python3 -c "import json; d=json.load(open('drift_report.json')); print(d.get('status', 'unknown'))" 2>/dev/null || echo "unknown")
 
 if [ "$STATUS" = "ok" ]; then
