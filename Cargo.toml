@@ -3,6 +3,7 @@ members = [
     "crates/vantage-core",
     "crates/vantage-pek",
     "crates/vantage-tx",
-    "crates/vantage-runtime"
+    "crates/vantage-runtime",
+    "crates/vantage-daemon"
 ]
 resolver = "2"
