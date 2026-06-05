@@ -14,6 +14,11 @@
 .agents/
 
 audit_report.json
+
+# Desktop App
+app/dist/
+app/src-tauri/target/
+app/node_modules/
 # .kit Memory Store
 .kit/brain.db-*
 .kit/brain.db.bak
