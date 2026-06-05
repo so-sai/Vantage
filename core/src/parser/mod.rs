@@ -284,7 +284,7 @@ impl EpistemicParser {
 
         // Add nodes from signals
         for sig in &signals {
-            graph.add_node(
+            graph.add_node_internal(
                 sig.symbol_id.clone(),
                 path,
                 sig.location.start_line,
@@ -355,7 +355,7 @@ impl EpistemicParser {
 
         // Add nodes from signals
         for sig in &signals {
-            graph.add_node(
+            graph.add_node_internal(
                 sig.symbol_id.clone(),
                 path,
                 sig.location.start_line,
@@ -389,7 +389,7 @@ impl EpistemicParser {
             if kind == "call" || kind == "method_call" || kind == "command" {
                 let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
                 if let Some(to) = self.extract_called_name(node, source) {
-                    graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                    graph.add_edge_internal(&from, &to, DependencyKind::CallEdge);
                     
                     // Capture symbol arguments as potential dependencies
                     // e.g. before_action :authenticate_user!
@@ -401,7 +401,7 @@ impl EpistemicParser {
                                 if arg.kind() == "simple_symbol" || arg.kind() == "symbol" {
                                     let sym_text = arg.utf8_text(source.as_bytes()).unwrap_or("").trim_start_matches(':');
                                     if !sym_text.is_empty() {
-                                        graph.add_edge(&from, &vantage_types::SymbolId::new(sym_text), DependencyKind::CallEdge);
+                                        graph.add_edge_internal(&from, &vantage_types::SymbolId::new(sym_text), DependencyKind::CallEdge);
                                     }
                                 }
                             }
@@ -424,7 +424,7 @@ impl EpistemicParser {
                         }
                     }
                     let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
-                    graph.add_edge(&from, &target, DependencyKind::CallEdge);
+                    graph.add_edge_internal(&from, &target, DependencyKind::CallEdge);
                 }
             }
         }
@@ -434,7 +434,7 @@ impl EpistemicParser {
         if kind == "call_expression" || kind == "call" {
             let from = caller.clone().unwrap_or_else(|| vantage_types::SymbolId::new("crate"));
             if let Some(to) = self.extract_called_name(node, source) {
-                graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                graph.add_edge_internal(&from, &to, DependencyKind::CallEdge);
             }
         }
 
@@ -456,7 +456,7 @@ impl EpistemicParser {
                 }
             }
             if let Some(to) = self.extract_called_name(node, source) {
-                graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                graph.add_edge_internal(&from, &to, DependencyKind::CallEdge);
             }
         }
 
@@ -469,7 +469,7 @@ impl EpistemicParser {
                     && !method_name.is_empty()
                 {
                     let to = SymbolId::new(method_name);
-                    graph.add_edge(&from, &to, DependencyKind::CallEdge);
+                    graph.add_edge_internal(&from, &to, DependencyKind::CallEdge);
                 }
             }
         }
@@ -488,7 +488,7 @@ impl EpistemicParser {
                 .to_string();
             if !import_name.is_empty() {
                 let to = vantage_types::SymbolId::new(&import_name);
-                graph.add_edge(&container, &to, DependencyKind::ModuleImport);
+                graph.add_edge_internal(&container, &to, DependencyKind::ModuleImport);
             }
         }
 

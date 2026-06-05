@@ -13,7 +13,7 @@ use anyhow::Result;
 pub fn process_impact_radius_stats(graph: &SymbolDependencyGraph) -> Result<()> {
     // Skeleton implementation: Create a placeholder DataFrame
     let s0 = Series::new("symbol".into(), &["vantage_core"]);
-    let s1 = Series::new("reach".into(), &[graph.nodes.len() as u32]);
+    let s1 = Series::new("reach".into(), &[graph.nodes().len() as u32]);
     let df = DataFrame::new(vec![s0.into(), s1.into()])?;
 
     // Prepared for v1.2.5: Complex impact analysis using Lazy API

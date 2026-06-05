@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use tracing::warn;
 use vantage_types::graph::{DependencyEdge, DependencyKind, SymbolState};
 use vantage_types::symbol::SymbolKind;
 use vantage_types::symbol_id::SymbolId;
@@ -61,13 +62,13 @@ impl DepNode {
 /// Owned by vantage-core, provides the memory kernel for the Sensor Brain.
 pub struct SymbolDependencyGraph {
     /// Maps symbol identity to its structural node
-    pub nodes: HashMap<SymbolId, DepNode>,
+    nodes: HashMap<SymbolId, DepNode>,
 
     /// Raw edges that don't require node resolution (O(1) Sensor mode)
-    pub unresolved_edges: Vec<(SymbolId, SymbolId, DependencyKind)>,
+    unresolved_edges: Vec<(SymbolId, SymbolId, DependencyKind)>,
 
     /// Current analysis generation
-    pub current_generation: u32,
+    current_generation: u32,
 }
 
 impl SymbolDependencyGraph {
@@ -79,16 +80,51 @@ impl SymbolDependencyGraph {
         }
     }
 
-    pub fn bump_generation(&mut self) {
+    /// Read-only access to nodes.
+    pub fn nodes(&self) -> &HashMap<SymbolId, DepNode> {
+        &self.nodes
+    }
+
+    /// Read-only access to unresolved edges.
+    pub fn unresolved_edges(&self) -> &[(SymbolId, SymbolId, DependencyKind)] {
+        &self.unresolved_edges
+    }
+
+    /// Current analysis generation.
+    pub fn current_generation(&self) -> u32 {
+        self.current_generation
+    }
+
+    /// Read-only access to nodes.
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Read-only access to nodes.
+    pub fn all_nodes(&self) -> &HashMap<SymbolId, DepNode> {
+        &self.nodes
+    }
+
+    /// Internal generation bump, used by the parser pipeline.
+    pub(crate) fn bump_generation_internal(&mut self) {
         self.current_generation += 1;
+    }
+
+    #[deprecated(
+        since = "0.97",
+        note = "Direct graph mutation bypasses PEK. Use the parser pipeline."
+    )]
+    pub fn bump_generation(&mut self) {
+        warn!(target: "pek.bypass", "PEK BYPASS: SymbolDependencyGraph::bump_generation called directly");
+        self.bump_generation_internal();
     }
 
     pub fn generation(&self) -> u32 {
         self.current_generation
     }
 
-    /// Register a symbol discovery.
-    pub fn add_node(&mut self, symbol: SymbolId, file: &str, line: u32, language: &str, kind: SymbolKind, fq_name: &str) {
+    /// Internal method used by the parser pipeline. Not deprecated — this is the legitimate internal path.
+    pub(crate) fn add_node_internal(&mut self, symbol: SymbolId, file: &str, line: u32, language: &str, kind: SymbolKind, fq_name: &str) {
         let generation = self.current_generation;
         self.nodes.entry(symbol.clone())
             .and_modify(|node| {
@@ -98,9 +134,18 @@ impl SymbolDependencyGraph {
             .or_insert_with(|| DepNode::new(symbol, file, line, generation, language, kind, fq_name));
     }
 
-    /// Register a dependency relationship.
-    /// Register a dependency relationship.
-    pub fn add_edge(&mut self, from: &SymbolId, to: &SymbolId, kind: DependencyKind) {
+    /// Register a symbol discovery.
+    #[deprecated(
+        since = "0.97",
+        note = "Direct graph mutation bypasses PEK. Use the parser pipeline with ProofGate."
+    )]
+    pub fn add_node(&mut self, symbol: SymbolId, file: &str, line: u32, language: &str, kind: SymbolKind, fq_name: &str) {
+        warn!(target: "pek.bypass", "PEK BYPASS: SymbolDependencyGraph::add_node called directly");
+        self.add_node_internal(symbol, file, line, language, kind, fq_name);
+    }
+
+    /// Internal edge registration, used by the parser pipeline.
+    pub(crate) fn add_edge_internal(&mut self, from: &SymbolId, to: &SymbolId, kind: DependencyKind) {
         if from.identity_eq(to) {
             return;
         }
@@ -122,6 +167,16 @@ impl SymbolDependencyGraph {
         }
     }
 
+    /// Register a dependency relationship.
+    #[deprecated(
+        since = "0.97",
+        note = "Direct graph mutation bypasses PEK. Use the parser pipeline with ProofGate."
+    )]
+    pub fn add_edge(&mut self, from: &SymbolId, to: &SymbolId, kind: DependencyKind) {
+        warn!(target: "pek.bypass", "PEK BYPASS: SymbolDependencyGraph::add_edge called directly");
+        self.add_edge_internal(from, to, kind);
+    }
+
     /// Impact radius (Upstream): who depends on this symbol?
     pub fn impact_radius(&self, symbol: &SymbolId) -> Vec<SymbolId> {
         self.nodes.get(symbol)
@@ -136,11 +191,10 @@ impl SymbolDependencyGraph {
             .unwrap_or_default()
     }
 
-    /// Evicts Tombstoned nodes from the graph if they are older than the grace period (1 generation).
-    pub fn gc(&mut self) {
+    /// Internal GC, used by the parser pipeline.
+    pub(crate) fn gc_internal(&mut self) {
         self.nodes.retain(|_, node| {
             if node.state == SymbolState::Tombstoned {
-                // Must be at least 1 generation old before eviction
                 node.generation >= self.current_generation
             } else {
                 true
@@ -148,15 +202,34 @@ impl SymbolDependencyGraph {
         });
     }
 
-    /// Marks nodes as Tombstoned if they were not seen in the current generation pass.
-    pub fn mark_tombstones(&mut self) {
+    /// Evicts Tombstoned nodes from the graph if they are older than the grace period (1 generation).
+    #[deprecated(
+        since = "0.97",
+        note = "Direct graph mutation bypasses PEK. GC should be triggered through the PEK-gated pipeline."
+    )]
+    pub fn gc(&mut self) {
+        warn!(target: "pek.bypass", "PEK BYPASS: SymbolDependencyGraph::gc called directly");
+        self.gc_internal();
+    }
+
+    /// Internal tombstone marking, used by the parser pipeline.
+    pub(crate) fn mark_tombstones_internal(&mut self) {
         for node in self.nodes.values_mut() {
             if node.generation < self.current_generation && node.state != SymbolState::Tombstoned {
                 node.state = SymbolState::Tombstoned;
-                // Update generation so GC gives it a lifecycle grace pass
                 node.generation = self.current_generation;
             }
         }
+    }
+
+    /// Marks nodes as Tombstoned if they were not seen in the current generation pass.
+    #[deprecated(
+        since = "0.97",
+        note = "Direct graph mutation bypasses PEK. Use the parser pipeline with ProofGate."
+    )]
+    pub fn mark_tombstones(&mut self) {
+        warn!(target: "pek.bypass", "PEK BYPASS: SymbolDependencyGraph::mark_tombstones called directly");
+        self.mark_tombstones_internal();
     }
 
     /// Export to DTO for transport to Kit/Agent.

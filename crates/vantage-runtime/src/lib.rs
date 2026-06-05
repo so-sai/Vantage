@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::SystemTime;
+use tracing::warn;
 use vantage_core::{
     CommitReceipt, EpistemicInvariant, EpistemicReader, InvariantContext,
     InvariantViolation, KnowledgeMutation, MutationOp, ResourceId
@@ -67,11 +68,22 @@ impl EpistemicInvariant for NoDuplicateUnitInvariant {
 }
 
 pub struct VantageRuntime {
-    pub index: Mutex<TemporalIndex>,
-    pub invariants: Vec<Box<dyn EpistemicInvariant>>,
+    index: Mutex<TemporalIndex>,
+    invariants: Vec<Box<dyn EpistemicInvariant>>,
 }
 
 impl VantageRuntime {
+    /// Access the temporal index (read-only operations).
+    /// Direct mutation outside PEK is deprecated.
+    pub fn index(&self) -> &Mutex<TemporalIndex> {
+        &self.index
+    }
+
+    /// Access the invariant list.
+    pub fn invariants(&self) -> &[Box<dyn EpistemicInvariant>] {
+        &self.invariants
+    }
+
     pub fn new() -> Self {
         Self {
             index: Mutex::new(TemporalIndex::default()),
@@ -79,8 +91,18 @@ impl VantageRuntime {
         }
     }
 
-    /// Multi-mutation DAG transaction with full atomicity
-    pub fn commit_transaction(&self, mutations: Vec<KnowledgeMutation>) -> Result<Vec<CommitReceipt>, String> {
+    /// Multi-mutation DAG transaction with full atomicity.
+    /// This is `pub(crate)` in PEK-2C — external callers must use `ProofGate::commit()`.
+    #[deprecated(
+        since = "0.97",
+        note = "Direct commit_transaction bypasses ProofGate. Use ProofGate::commit() or ProofGate::commit_transaction() instead."
+    )]
+    pub(crate) fn commit_transaction(&self, mutations: Vec<KnowledgeMutation>) -> Result<Vec<CommitReceipt>, String> {
+        warn!(
+            target: "pek.bypass",
+            "PEK BYPASS: VantageRuntime::commit_transaction called directly without ProofGate ({} mutations)",
+            mutations.len()
+        );
         let dag = TransactionDAG::compile(mutations)?;
         let mut index_guard = self.index.lock().map_err(|e| e.to_string())?;
         let execution_order = dag.topological_sort();
@@ -197,7 +219,7 @@ mod tests {
         assert!(receipt_result.is_ok());
 
         {
-            let index = runtime.index.lock().unwrap();
+            let index = runtime.index().lock().unwrap();
             assert!(index.exists(&unit_id));
             let content = index.read_unit(&unit_id);
             assert_eq!(content, Some("fn main() { println!(\"Vantage\"); }".to_string()));
@@ -240,6 +262,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_progressive_transaction_dag_flow() {
         let runtime = VantageRuntime::new();
         let actor = AgentId("developer_01".to_string());
