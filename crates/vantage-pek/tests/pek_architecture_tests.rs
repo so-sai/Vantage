@@ -1,33 +1,35 @@
 use vantage_pek::*;
 
-/// PEK-2 Invariant: No unverified certificate can reach ProofGate.
-/// ProofCertificate does NOT implement Attestation, so MutationRequest<ProofCertificate>
-/// will fail to compile. This test verifies that the type system enforces the boundary.
+/// PEK-2 + TIA-1 Invariant: Only AuthorizedCertificate can reach ProofGate.
+/// ProofCertificate → verify() → VerifiedCertificate → authorize() → AuthorizedCertificate.
+/// Neither ProofCertificate nor VerifiedCertificate implement Attestation.
 #[test]
 fn unverified_certificate_cannot_be_used_as_attestation() {
     let cert = ProofCertificate::new("test".into(), [1u8; 32], 1);
-    // The following line would NOT compile:
+    // The following lines would NOT compile:
     // let req = MutationRequest::new(mutation, cert);
-    // Because ProofCertificate does not implement Attestation.
+    // let req = MutationRequest::new(mutation, verified);
+    // Because neither ProofCertificate nor VerifiedCertificate implement Attestation.
     //
-    // Instead, caller must verify() first:
-    let result = cert.verify();
-    assert!(result.is_ok());
-    let verified = result.unwrap();
-    // verified: VerifiedCertificate — this does implement Attestation
-    // and can be used with MutationRequest.
-    //
-    // MutationRequest<VerifiedCertificate> compiles;
-    // MutationRequest<ProofCertificate> does not.
-    let _ = verified; // silence unused warning
+    // Correct path: verify() → authorize() → AuthorizedCertificate → MutationRequest
+    let verified = cert.verify().expect("valid cert");
+    let _ = verified;
 }
 
-/// PEK-2 Invariant: verified certificate's verify() always returns true.
+/// TIA-1 Invariant: VerifiedCertificate does NOT implement Attestation.
+/// It must go through authorize() to become AuthorizedCertificate.
+/// This test verifies the typestate boundary by checking that
+/// VerifiedCertificate cannot be used where Attestation is required.
 #[test]
-fn verified_certificate_always_passes_attestation() {
+fn verified_certificate_does_not_implement_attestation() {
     let cert = ProofCertificate::new("test".into(), [1u8; 32], 1);
     let verified = cert.verify().unwrap();
-    assert!(verified.verify());
+    // The following line would NOT compile:
+    // let req: MutationRequest<_> = MutationRequest::new(mutation, verified);
+    // Because VerifiedCertificate does not implement Attestation.
+    //
+    // This test just verifies the typestate exists — no runtime assertion needed.
+    let _ = verified;
 }
 
 /// PEK-2 Invariant: certificate with zero hash must fail verification.

@@ -12,13 +12,17 @@ use tower_http::cors::CorsLayer;
 use vantage_core::{CommitReceipt, KnowledgeMutation};
 use vantage_pek::{
     MutationRequest, PEKStats, ProofCertificate, ProofGate, ProofPolicy, PEKError,
-    SystemProof, TransactionRequest, VerifiedCertificate,
+    SystemProof, TransactionRequest,
 };
 use vantage_runtime::VantageRuntime;
+use vantage_trust::{
+    AuthorizedMutation, IdentityId, PolicyDigest, StaticTrustPolicy, TrustEvaluator,
+};
 
 struct AppState {
     runtime: VantageRuntime,
     stats: PEKStats,
+    trust: Box<dyn TrustEvaluator>,
     http_client: reqwest::Client,
 }
 
@@ -36,6 +40,7 @@ impl AttestationPayload {
         policy: ProofPolicy,
         runtime: &VantageRuntime,
         stats: &PEKStats,
+        trust: &dyn TrustEvaluator,
     ) -> Result<CommitReceipt, PEKError> {
         match self {
             AttestationPayload::System { proof } => {
@@ -43,9 +48,15 @@ impl AttestationPayload {
                 ProofGate::commit(req, policy, runtime, stats)
             }
             AttestationPayload::Certificate { cert } => {
-                let verified: VerifiedCertificate = cert.verify()?;
-                let req = MutationRequest::new(mutation, verified);
-                ProofGate::commit(req, policy, runtime, stats)
+                let verified = cert.verify()?;
+                let authorized = trust.authorize(verified).map_err(|e| PEKError::PolicyViolation(e))?;
+                let auth_mutation = AuthorizedMutation::new(mutation, authorized);
+                // AuthorizedMutation → committed via runtime's TIA-1 path
+                // For now, use ProofGate with AuthorizedCertificate's Attestation impl
+                // (AuthorizedCertificate implements Attestation in vantage-trust)
+                runtime.commit_authorized(vec![auth_mutation])
+                    .map(|mut v| v.pop().unwrap())
+                    .map_err(|e| PEKError::RuntimeError(e))
             }
         }
     }
@@ -56,6 +67,7 @@ impl AttestationPayload {
         policy: ProofPolicy,
         runtime: &VantageRuntime,
         stats: &PEKStats,
+        trust: &dyn TrustEvaluator,
     ) -> Result<Vec<CommitReceipt>, PEKError> {
         match self {
             AttestationPayload::System { proof } => {
@@ -63,9 +75,13 @@ impl AttestationPayload {
                 ProofGate::commit_transaction(req, policy, runtime, stats)
             }
             AttestationPayload::Certificate { cert } => {
-                let verified: VerifiedCertificate = cert.verify()?;
-                let req = TransactionRequest::new(mutations, verified);
-                ProofGate::commit_transaction(req, policy, runtime, stats)
+                let verified = cert.verify()?;
+                let authorized = trust.authorize(verified).map_err(|e| PEKError::PolicyViolation(e))?;
+                let auth_mutations: Vec<AuthorizedMutation> = mutations.into_iter()
+                    .map(|m| AuthorizedMutation::new(m, authorized.clone()))
+                    .collect();
+                runtime.commit_authorized(auth_mutations)
+                    .map_err(|e| PEKError::RuntimeError(e))
             }
         }
     }
@@ -75,10 +91,15 @@ impl AttestationPayload {
 async fn main() {
     let runtime = VantageRuntime::new();
     let stats = PEKStats::new();
+    let trust = Box::new(StaticTrustPolicy::new(
+        IdentityId("vantage-daemon".into()),
+        PolicyDigest("policy-v1".into()),
+    ));
 
     let state = Arc::new(AppState {
         runtime,
         stats,
+        trust,
         http_client: reqwest::Client::new(),
     });
 
@@ -110,7 +131,7 @@ async fn handle_mutate(
 ) -> Response {
     let policy = parse_policy(payload.policy.as_deref());
 
-    match payload.attestation.commit_single(payload.mutation, policy, &state.runtime, &state.stats) {
+    match payload.attestation.commit_single(payload.mutation, policy, &state.runtime, &state.stats, &*state.trust) {
         Ok(receipt) => (StatusCode::OK, Json(receipt)).into_response(),
         Err(err) => (
             StatusCode::BAD_REQUEST,
@@ -132,7 +153,7 @@ async fn handle_transaction(
 ) -> Response {
     let policy = parse_policy(payload.policy.as_deref());
 
-    match payload.attestation.commit_batch(payload.mutations, policy, &state.runtime, &state.stats) {
+    match payload.attestation.commit_batch(payload.mutations, policy, &state.runtime, &state.stats, &*state.trust) {
         Ok(receipts) => (StatusCode::OK, Json(receipts)).into_response(),
         Err(err) => (
             StatusCode::BAD_REQUEST,

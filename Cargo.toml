@@ -4,6 +4,7 @@ members = [
     "crates/vantage-pek",
     "crates/vantage-tx",
     "crates/vantage-runtime",
+    "crates/vantage-trust",
     "crates/vantage-daemon",
     "app/src-tauri"
 ]

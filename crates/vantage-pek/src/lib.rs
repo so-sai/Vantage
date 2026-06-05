@@ -57,11 +57,10 @@ impl ProofCertificate {
     }
 }
 
-impl Attestation for VerifiedCertificate {
-    fn verify(&self) -> bool {
-        true
-    }
-}
+// NOTE: VerifiedCertificate intentionally does NOT implement Attestation.
+// The compiler enforces that only AuthorizedCertificate (from vantage-trust)
+// can be used with MutationRequest and ProofGate.
+// This is the TIA-1 invariant: verification without authorization is rejected.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SystemProof {
@@ -353,15 +352,13 @@ mod tests {
     }
 
     #[test]
-    fn test_policy_enforced_admits_verified_certificate() {
+    fn test_policy_enforced_admits_valid_attestation() {
         let stats = PEKStats::new();
         let executor = MockExecutor;
         let mutation = create_test_mutation("mut_valid_id");
-        let mut hash = [0u8; 32];
-        hash[0] = 0xFF;
-        let cert = ProofCertificate::new("claim_01".to_string(), hash, 1);
-        let verified = cert.verify().expect("valid cert should verify");
-        let req = MutationRequest::new(mutation, verified);
+        // VerifiedCertificate no longer implements Attestation.
+        // Use SystemProof::Test for testing ProofGate admission.
+        let req = MutationRequest::new(mutation, SystemProof::Test);
 
         let res = ProofGate::commit(req, ProofPolicy::Enforced, &executor, &stats);
         assert!(res.is_ok());
@@ -374,11 +371,8 @@ mod tests {
         let stats = PEKStats::new();
         let executor = MockExecutor;
         let mutation = create_test_mutation("bad_id_prefix_without_mut");
-        let mut hash = [0u8; 32];
-        hash[0] = 0xFF;
-        let cert = ProofCertificate::new("claim_01".to_string(), hash, 1);
-        let verified = cert.verify().expect("valid cert should verify");
-        let req = MutationRequest::new(mutation, verified);
+        // Use SystemProof::Test — VerifiedCertificate no longer implements Attestation
+        let req = MutationRequest::new(mutation, SystemProof::Test);
 
         let res = ProofGate::commit(req, ProofPolicy::StrictCanonical, &executor, &stats);
         assert!(matches!(res.err(), Some(PEKError::PolicyViolation(_))));
@@ -418,11 +412,8 @@ mod tests {
         let mutations = vec![
             create_test_mutation("bad_prefix"),
         ];
-        let mut hash = [0u8; 32];
-        hash[0] = 0xFF;
-        let cert = ProofCertificate::new("claim_01".to_string(), hash, 1);
-        let verified = cert.verify().expect("valid cert should verify");
-        let tx_req = TransactionRequest::new(mutations, verified);
+        // Use SystemProof::Test — VerifiedCertificate no longer implements Attestation
+        let tx_req = TransactionRequest::new(mutations, SystemProof::Test);
         let res = ProofGate::commit_transaction(tx_req, ProofPolicy::StrictCanonical, &executor, &stats);
         assert!(matches!(res.err(), Some(PEKError::PolicyViolation(_))));
         assert_eq!(stats.rejected_count.load(Ordering::SeqCst), 1);

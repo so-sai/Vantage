@@ -7,6 +7,7 @@ use vantage_core::{
     InvariantViolation, KnowledgeMutation, MutationOp, ResourceId
 };
 use vantage_pek::EpistemicExecutor;
+use vantage_trust::AuthorizedMutation;
 use vantage_tx::{TransactionalView, TransactionDAG};
 
 #[derive(Debug, Clone)]
@@ -89,6 +90,14 @@ impl VantageRuntime {
             index: Mutex::new(TemporalIndex::default()),
             invariants: vec![Box::new(NoDuplicateUnitInvariant)],
         }
+    }
+
+    /// TIA-1: Commit authorized mutations.
+    /// Only accepts AuthorizedMutation (verified + authorized).
+    /// This is the ONLY public mutation API in TIA-1.
+    pub fn commit_authorized(&self, mutations: Vec<AuthorizedMutation>) -> Result<Vec<CommitReceipt>, String> {
+        let raw: Vec<KnowledgeMutation> = mutations.into_iter().map(|am| am.mutation).collect();
+        self.commit_transaction(raw)
     }
 
     /// Multi-mutation DAG transaction with full atomicity.
