@@ -1,0 +1,9 @@
+[package]
+name = "vantage-tx"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+vantage-core = { path = "../vantage-core" }
+vantage-pek = { path = "../vantage-pek" }
+serde = { version = "1.0", features = ["derive"] }

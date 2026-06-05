@@ -1,0 +1,11 @@
+[package]
+name = "vantage-runtime"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+vantage-core = { path = "../vantage-core" }
+vantage-pek = { path = "../vantage-pek" }
+vantage-tx = { path = "../vantage-tx" }
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
