@@ -6,24 +6,51 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use serde_json::json;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use tower_http::cors::CorsLayer;
-use vantage_core::{CommitReceipt, KnowledgeMutation};
+use vantage_core::{
+    CommitReceipt, ElectionResult, EpochId, EpochProposal, ExecutionEnvelope, KnowledgeMutation,
+    LogicalTime, NodeId,
+};
 use vantage_pek::{
     MutationRequest, PEKStats, ProofCertificate, ProofGate, ProofPolicy, PEKError,
     SystemProof, TransactionRequest,
 };
-use vantage_runtime::VantageRuntime;
+use vantage_prn::{AttractorMonitor, EpochSnapshot, ElectionEngine, TrustDynamics};
+use vantage_runtime::{ExecutionPayload, VantageRuntime};
 use vantage_trust::{
     AuthorizedMutation, IdentityId, PolicyDigest, StaticTrustPolicy, TrustEvaluator,
 };
+
+struct MonitorState {
+    trust_dynamics: TrustDynamics,
+    monitor: AttractorMonitor,
+    current_phase: PhaseSnapshot,
+}
+
+#[derive(Clone, Serialize)]
+struct PhaseSnapshot {
+    epoch: u64,
+    state: String,
+}
 
 struct AppState {
     runtime: VantageRuntime,
     stats: PEKStats,
     trust: Box<dyn TrustEvaluator>,
+    engine: ElectionEngine,
+    monitor_state: Mutex<MonitorState>,
+    sequence: AtomicU64,
+    epoch: AtomicU64,
     http_client: reqwest::Client,
+}
+
+impl AppState {
+    fn current_epoch(&self) -> EpochId {
+        EpochId(self.epoch.load(Ordering::SeqCst))
+    }
 }
 
 #[derive(Deserialize)]
@@ -31,6 +58,65 @@ struct AppState {
 enum AttestationPayload {
     System { proof: SystemProof },
     Certificate { cert: ProofCertificate },
+}
+
+fn next_envelope(state: &AppState) -> ExecutionEnvelope {
+    let seq = state.sequence.fetch_add(1, Ordering::SeqCst) + 1;
+    ExecutionEnvelope::new(state.current_epoch(), seq, LogicalTime::new(seq))
+}
+
+fn try_advance_epoch(state: &AppState) -> Result<serde_json::Value, String> {
+    let current = state.current_epoch();
+    let next_epoch = EpochId(current.0 + 1);
+    let proposal = EpochProposal {
+        epoch: next_epoch,
+        policy_snapshot: 1,
+        min_sequence: state.sequence.load(Ordering::SeqCst),
+        cutoff_time: LogicalTime::new(state.sequence.load(Ordering::SeqCst)),
+        proposer: state.engine.node_id().clone(),
+        trust_weight: 100,
+    };
+
+    match state.engine.run_election(vec![proposal], current) {
+        ElectionResult::Candidate(quorum) => {
+            let locked = state.runtime.lock_epoch()?;
+            state.runtime.commit_epoch(next_epoch)?;
+            state.epoch.store(next_epoch.0, Ordering::SeqCst);
+
+            // Record epoch snapshot in monitor (read-only observability side-channel)
+            if let Ok(mut ms) = state.monitor_state.lock() {
+                let agreement = vantage_core::GlobalEpochAgreement {
+                    epoch: next_epoch,
+                    quorum: quorum.clone(),
+                    supporting_nodes: quorum.supporters.clone(),
+                    global_score: quorum.aggregate_score,
+                };
+                ms.trust_dynamics.update(Some(&agreement), &quorum.supporters);
+                let trust_data: std::collections::HashMap<NodeId, f64> =
+                    ms.trust_dynamics.trust_snapshot().into_iter().collect();
+                ms.monitor.record(EpochSnapshot {
+                    epoch: next_epoch.0,
+                    trust_values: trust_data,
+                    winning_nodes: quorum.supporters.clone(),
+                });
+                ms.current_phase = PhaseSnapshot {
+                    epoch: next_epoch.0,
+                    state: format!("{:?}", ms.monitor.classify()),
+                };
+            }
+
+            Ok(json!({
+                "message": format!(
+                    "Epoch transition: {} → {} (quorum: {})",
+                    locked.0, next_epoch.0, quorum.supporters.len()
+                ),
+                "epoch": next_epoch.0,
+            }))
+        }
+        ElectionResult::NoConsensus => {
+            Err("No epoch consensus reached".to_string())
+        }
+    }
 }
 
 impl AttestationPayload {
@@ -41,6 +127,7 @@ impl AttestationPayload {
         runtime: &VantageRuntime,
         stats: &PEKStats,
         trust: &dyn TrustEvaluator,
+        state: &AppState,
     ) -> Result<CommitReceipt, PEKError> {
         match self {
             AttestationPayload::System { proof } => {
@@ -50,11 +137,11 @@ impl AttestationPayload {
             AttestationPayload::Certificate { cert } => {
                 let verified = cert.verify()?;
                 let authorized = trust.authorize(verified).map_err(|e| PEKError::PolicyViolation(e))?;
+                // Construct AuthorizedMutation (type-safe binding) then
+                // convert to ExecutionPayload — runtime does NOT see governance internals
                 let auth_mutation = AuthorizedMutation::new(mutation, authorized);
-                // AuthorizedMutation → committed via runtime's TIA-1 path
-                // For now, use ProofGate with AuthorizedCertificate's Attestation impl
-                // (AuthorizedCertificate implements Attestation in vantage-trust)
-                runtime.commit_authorized(vec![auth_mutation])
+                let payload = ExecutionPayload::new(auth_mutation.mutation, next_envelope(state));
+                runtime.commit_authorized(vec![payload])
                     .map(|mut v| v.pop().unwrap())
                     .map_err(|e| PEKError::RuntimeError(e))
             }
@@ -68,6 +155,7 @@ impl AttestationPayload {
         runtime: &VantageRuntime,
         stats: &PEKStats,
         trust: &dyn TrustEvaluator,
+        state: &AppState,
     ) -> Result<Vec<CommitReceipt>, PEKError> {
         match self {
             AttestationPayload::System { proof } => {
@@ -77,10 +165,13 @@ impl AttestationPayload {
             AttestationPayload::Certificate { cert } => {
                 let verified = cert.verify()?;
                 let authorized = trust.authorize(verified).map_err(|e| PEKError::PolicyViolation(e))?;
-                let auth_mutations: Vec<AuthorizedMutation> = mutations.into_iter()
-                    .map(|m| AuthorizedMutation::new(m, authorized.clone()))
+                let payloads: Vec<ExecutionPayload> = mutations.into_iter()
+                    .map(|m| {
+                        let auth_mutation = AuthorizedMutation::new(m, authorized.clone());
+                        ExecutionPayload::new(auth_mutation.mutation, next_envelope(state))
+                    })
                     .collect();
-                runtime.commit_authorized(auth_mutations)
+                runtime.commit_authorized(payloads)
                     .map_err(|e| PEKError::RuntimeError(e))
             }
         }
@@ -100,6 +191,14 @@ async fn main() {
         runtime,
         stats,
         trust,
+        engine: ElectionEngine::new(NodeId("vantage-daemon".into()), 1),
+        monitor_state: Mutex::new(MonitorState {
+            trust_dynamics: TrustDynamics::new(1.0, 0.5, 0.3, 0.01),
+            monitor: AttractorMonitor::new(5),
+            current_phase: PhaseSnapshot { epoch: 1, state: "Forming".to_string() },
+        }),
+        sequence: AtomicU64::new(0),
+        epoch: AtomicU64::new(1),
         http_client: reqwest::Client::new(),
     });
 
@@ -107,6 +206,8 @@ async fn main() {
         .route("/v1/mutate", post(handle_mutate))
         .route("/v1/transaction", post(handle_transaction))
         .route("/v1/stats", get(handle_get_stats))
+        .route("/v1/epoch/advance", post(handle_epoch_advance))
+        .route("/v1/epoch/phase", get(handle_epoch_phase))
         .route("/v1/chat/completions", post(handle_chat_proxy))
         .layer(CorsLayer::permissive())
         .with_state(state);
@@ -131,7 +232,7 @@ async fn handle_mutate(
 ) -> Response {
     let policy = parse_policy(payload.policy.as_deref());
 
-    match payload.attestation.commit_single(payload.mutation, policy, &state.runtime, &state.stats, &*state.trust) {
+    match payload.attestation.commit_single(payload.mutation, policy, &state.runtime, &state.stats, &*state.trust, &state) {
         Ok(receipt) => (StatusCode::OK, Json(receipt)).into_response(),
         Err(err) => (
             StatusCode::BAD_REQUEST,
@@ -153,13 +254,34 @@ async fn handle_transaction(
 ) -> Response {
     let policy = parse_policy(payload.policy.as_deref());
 
-    match payload.attestation.commit_batch(payload.mutations, policy, &state.runtime, &state.stats, &*state.trust) {
+    match payload.attestation.commit_batch(payload.mutations, policy, &state.runtime, &state.stats, &*state.trust, &state) {
         Ok(receipts) => (StatusCode::OK, Json(receipts)).into_response(),
         Err(err) => (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({ "error": format!("PEK-1 Rejected Transaction: {:?}", err) })),
         ).into_response(),
     }
+}
+
+async fn handle_epoch_advance(
+    State(state): State<Arc<AppState>>,
+) -> Response {
+    match try_advance_epoch(&state) {
+        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+        Err(err) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": err })),
+        ).into_response(),
+    }
+}
+
+async fn handle_epoch_phase(
+    State(state): State<Arc<AppState>>,
+) -> Response {
+    let phase = state.monitor_state.lock()
+        .map(|ms| ms.current_phase.clone())
+        .unwrap_or(PhaseSnapshot { epoch: 0, state: "Unknown".to_string() });
+    (StatusCode::OK, Json(json!(phase))).into_response()
 }
 
 #[derive(Serialize)]

@@ -6,6 +6,8 @@ members = [
     "crates/vantage-runtime",
     "crates/vantage-trust",
     "crates/vantage-daemon",
+    "crates/vantage-prn",
+    "crates/vantage-client",
     "app/src-tauri"
 ]
 resolver = "2"

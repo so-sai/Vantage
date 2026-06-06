@@ -9,6 +9,7 @@ vantage-pek = { path = "../vantage-pek" }
 vantage-tx = { path = "../vantage-tx" }
 vantage-runtime = { path = "../vantage-runtime" }
 vantage-trust = { path = "../vantage-trust" }
+vantage-prn = { path = "../vantage-prn" }
 axum = { version = "0.7", features = ["macros"] }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }

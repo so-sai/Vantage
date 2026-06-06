@@ -3,11 +3,10 @@ use std::sync::Mutex;
 use std::time::SystemTime;
 use tracing::warn;
 use vantage_core::{
-    CommitReceipt, EpistemicInvariant, EpistemicReader, InvariantContext,
-    InvariantViolation, KnowledgeMutation, MutationOp, ResourceId
+    CommitReceipt, CommitResult, EpochId, EpochState, ExecutionEnvelope, EpistemicInvariant,
+    EpistemicReader, InvariantContext, InvariantViolation, KnowledgeMutation, MutationOp, ResourceId
 };
 use vantage_pek::EpistemicExecutor;
-use vantage_trust::AuthorizedMutation;
 use vantage_tx::{TransactionalView, TransactionDAG};
 
 #[derive(Debug, Clone)]
@@ -68,9 +67,38 @@ impl EpistemicInvariant for NoDuplicateUnitInvariant {
     }
 }
 
+/// Opaque execution payload — constructed by daemon from an AuthorizedMutation.
+/// Runtime does NOT inspect governance internals (issuer, policy_digest, etc.).
+/// This is the TIA-2 boundary: runtime is an opaque execution kernel.
+pub struct ExecutionPayload {
+    pub mutation: KnowledgeMutation,
+    pub envelope: ExecutionEnvelope,
+}
+
+impl ExecutionPayload {
+    pub fn new(mutation: KnowledgeMutation, envelope: ExecutionEnvelope) -> Self {
+        Self { mutation, envelope }
+    }
+}
+
+/// TIA-2: Temporal execution state — tracks epoch and sequence monotonicity.
+/// Protected by Mutex for interior mutability (runtime uses &self API).
+pub struct TemporalState {
+    pub current_epoch: EpochId,
+    pub last_sequence: u64,
+    pub epoch_state: EpochState,
+}
+
+impl TemporalState {
+    pub fn new(epoch: EpochId) -> Self {
+        Self { current_epoch: epoch, last_sequence: 0, epoch_state: EpochState::Active }
+    }
+}
+
 pub struct VantageRuntime {
     index: Mutex<TemporalIndex>,
     invariants: Vec<Box<dyn EpistemicInvariant>>,
+    temporal: Mutex<TemporalState>,
 }
 
 impl VantageRuntime {
@@ -89,14 +117,92 @@ impl VantageRuntime {
         Self {
             index: Mutex::new(TemporalIndex::default()),
             invariants: vec![Box::new(NoDuplicateUnitInvariant)],
+            temporal: Mutex::new(TemporalState::new(EpochId(1))),
         }
     }
 
-    /// TIA-1: Commit authorized mutations.
-    /// Only accepts AuthorizedMutation (verified + authorized).
-    /// This is the ONLY public mutation API in TIA-1.
-    pub fn commit_authorized(&self, mutations: Vec<AuthorizedMutation>) -> Result<Vec<CommitReceipt>, String> {
-        let raw: Vec<KnowledgeMutation> = mutations.into_iter().map(|am| am.mutation).collect();
+    pub fn with_epoch(epoch: EpochId) -> Self {
+        Self {
+            index: Mutex::new(TemporalIndex::default()),
+            invariants: vec![Box::new(NoDuplicateUnitInvariant)],
+            temporal: Mutex::new(TemporalState::new(epoch)),
+        }
+    }
+
+    /// PRN-1: Lock the current epoch — no new payloads accepted after this point.
+    /// Active → Locked. In-flight completion still allowed.
+    pub fn lock_epoch(&self) -> Result<EpochId, String> {
+        let mut temporal = self.temporal.lock().map_err(|e| e.to_string())?;
+        match temporal.epoch_state {
+            EpochState::Active => {
+                temporal.epoch_state = EpochState::Locked;
+                Ok(temporal.current_epoch)
+            }
+            _ => Err(format!(
+                "Cannot lock epoch {:?}: state is {:?}",
+                temporal.current_epoch, temporal.epoch_state
+            )),
+        }
+    }
+
+    /// PRN-1: Commit the current epoch and transition to a new one.
+    /// Locked → Committed (old epoch sealed). New epoch becomes Active.
+    /// Returns CommitResult with quorum info (single-node: threshold = 1).
+    pub fn commit_epoch(&self, new_epoch: EpochId) -> Result<CommitResult, String> {
+        let mut temporal = self.temporal.lock().map_err(|e| e.to_string())?;
+        match temporal.epoch_state {
+            EpochState::Locked => {
+                let old_epoch = temporal.current_epoch;
+                temporal.current_epoch = new_epoch;
+                temporal.last_sequence = 0;
+                temporal.epoch_state = EpochState::Active;
+                Ok(CommitResult::new(old_epoch, true, 1, 1))
+            }
+            _ => Err(format!(
+                "Cannot commit epoch {:?}: state is {:?}",
+                temporal.current_epoch, temporal.epoch_state
+            )),
+        }
+    }
+
+    /// TIA-2: Commit authorized mutations.
+    /// Accepts ExecutionPayload (opaque — no governance internals leaked).
+    /// Runtime validates:
+    ///   - epoch state (only Active accepts new payloads)
+    ///   - epoch consistency (all payloads must match current epoch)
+    ///   - sequence monotonicity (strictly increasing)
+    /// This is the ONLY public mutation API from runtime.
+    pub fn commit_authorized(&self, mutations: Vec<ExecutionPayload>) -> Result<Vec<CommitReceipt>, String> {
+        // Phase 1: validate temporal envelope (epoch state + match + sequence monotonic)
+        {
+            let mut temporal = self.temporal.lock().map_err(|e| e.to_string())?;
+
+            // Only Active epoch accepts new payloads
+            if temporal.epoch_state != EpochState::Active {
+                return Err(format!(
+                    "Epoch {:?} is {:?}: not accepting new payloads",
+                    temporal.current_epoch, temporal.epoch_state
+                ));
+            }
+
+            for payload in &mutations {
+                if payload.envelope.epoch != temporal.current_epoch {
+                    return Err(format!(
+                        "TIA-2 epoch mismatch: expected {:?}, got {:?}",
+                        temporal.current_epoch, payload.envelope.epoch
+                    ));
+                }
+                if payload.envelope.sequence <= temporal.last_sequence {
+                    return Err(format!(
+                        "TIA-2 sequence violation: {} <= last sequence {}",
+                        payload.envelope.sequence, temporal.last_sequence
+                    ));
+                }
+                temporal.last_sequence = payload.envelope.sequence;
+            }
+        }
+
+        let raw: Vec<KnowledgeMutation> = mutations.into_iter().map(|ep| ep.mutation).collect();
         self.commit_transaction(raw)
     }
 
@@ -203,7 +309,7 @@ impl EpistemicExecutor for VantageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vantage_core::{AgentId, MutationId, MutationOp, ResourceId};
+    use vantage_core::{AgentId, CommitResult, EpochId, EpochState, ExecutionEnvelope, LogicalTime, MutationId, MutationOp, ResourceId};
     use vantage_pek::{MutationRequest, TransactionRequest, ProofGate, ProofPolicy, SystemProof, PEKStats};
 
     #[test]
@@ -376,5 +482,150 @@ mod tests {
 
         assert!(runtime.exists(&unit_a));
         assert!(runtime.exists(&unit_b));
+    }
+
+    // --- TIA-2 temporal enforcement tests ---
+
+    fn make_payload(mutation: KnowledgeMutation, epoch: EpochId, sequence: u64) -> ExecutionPayload {
+        let envelope = ExecutionEnvelope::new(epoch, sequence, LogicalTime::new(sequence));
+        ExecutionPayload::new(mutation, envelope)
+    }
+
+    fn test_mutation(id: &str, resource: &str) -> KnowledgeMutation {
+        KnowledgeMutation {
+            mutation_id: MutationId(id.to_string()),
+            actor: AgentId("temporal_test".to_string()),
+            op: MutationOp::Insert {
+                resource_id: ResourceId(format!("unit:{}", resource)),
+                payload: "test".to_string(),
+            },
+            timestamp: SystemTime::now(),
+        }
+    }
+
+    #[test]
+    fn test_temporal_valid_payload_accepted() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let payload = make_payload(test_mutation("mut_valid", "t_valid"), EpochId(1), 1);
+        let result = runtime.commit_authorized(vec![payload]);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_temporal_epoch_mismatch_rejected() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let payload = make_payload(test_mutation("mut_bad_epoch", "t_bad_epoch"), EpochId(2), 1);
+        let result = runtime.commit_authorized(vec![payload]);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("epoch mismatch"), "error: {}", err);
+    }
+
+    #[test]
+    fn test_temporal_sequence_monotonic_violation_rejected() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let p1 = make_payload(test_mutation("mut_seq1", "t_seq1"), EpochId(1), 2);
+        let p2 = make_payload(test_mutation("mut_seq1_dup", "t_seq2"), EpochId(1), 1);
+        let result = runtime.commit_authorized(vec![p1, p2]);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("sequence violation"), "error: {}", err);
+    }
+
+    #[test]
+    fn test_temporal_sequence_tracked_across_calls() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let p1 = make_payload(test_mutation("mut_first", "t_first"), EpochId(1), 1);
+        assert!(runtime.commit_authorized(vec![p1]).is_ok());
+
+        let p2 = make_payload(test_mutation("mut_second", "t_second"), EpochId(1), 2);
+        assert!(runtime.commit_authorized(vec![p2]).is_ok());
+
+        let p3 = make_payload(test_mutation("mut_replay", "t_third"), EpochId(1), 2);
+        let result = runtime.commit_authorized(vec![p3]);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("sequence violation"), "error: {}", err);
+    }
+
+    // --- PRN-1 epoch lifecycle tests ---
+
+    #[test]
+    fn test_epoch_starts_active() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let payload = make_payload(test_mutation("mut_active", "t_active"), EpochId(1), 1);
+        assert!(runtime.commit_authorized(vec![payload]).is_ok());
+    }
+
+    #[test]
+    fn test_epoch_lock_rejects_new_payloads() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        // Lock the epoch
+        let locked = runtime.lock_epoch().expect("lock should succeed");
+        assert_eq!(locked, EpochId(1));
+
+        // New payloads should be rejected
+        let payload = make_payload(test_mutation("mut_locked", "t_locked"), EpochId(1), 1);
+        let result = runtime.commit_authorized(vec![payload]);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Locked"), "error: {}", err);
+    }
+
+    #[test]
+    fn test_epoch_lock_twice_fails() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        assert!(runtime.lock_epoch().is_ok());
+        let result = runtime.lock_epoch();
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Cannot lock"), "error: {}", err);
+    }
+
+    #[test]
+    fn test_epoch_commit_transitions_to_new_epoch() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        runtime.lock_epoch().expect("lock");
+
+        let result = runtime.commit_epoch(EpochId(2)).expect("commit");
+        assert!(result.success);
+        assert_eq!(result.epoch, EpochId(1));
+
+        // New epoch (2) should accept payloads
+        let payload = make_payload(test_mutation("mut_epoch2", "t_epoch2"), EpochId(2), 1);
+        assert!(runtime.commit_authorized(vec![payload]).is_ok());
+    }
+
+    #[test]
+    fn test_epoch_commit_without_lock_fails() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+        let result = runtime.commit_epoch(EpochId(2));
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("Cannot commit"), "error: {}", err);
+    }
+
+    #[test]
+    fn test_epoch_full_lifecycle() {
+        let runtime = VantageRuntime::with_epoch(EpochId(1));
+
+        // Phase 1: Active — payloads accepted
+        let p1 = make_payload(test_mutation("mut_phase1", "t_phase1"), EpochId(1), 1);
+        assert!(runtime.commit_authorized(vec![p1]).is_ok());
+
+        // Phase 2: Lock
+        runtime.lock_epoch().expect("lock");
+
+        // Phase 3: Active epoch payloads rejected
+        let p2 = make_payload(test_mutation("mut_phase2", "t_phase2"), EpochId(1), 2);
+        assert!(runtime.commit_authorized(vec![p2]).is_err());
+
+        // Phase 4: Commit → transition to epoch 2
+        let commit_result = runtime.commit_epoch(EpochId(2)).expect("commit");
+        assert!(commit_result.success);
+
+        // Phase 5: Epoch 2 active
+        let p3 = make_payload(test_mutation("mut_phase3", "t_phase3"), EpochId(2), 1);
+        assert!(runtime.commit_authorized(vec![p3]).is_ok());
     }
 }

@@ -7,7 +7,6 @@ edition = "2021"
 vantage-core = { path = "../vantage-core" }
 vantage-pek = { path = "../vantage-pek" }
 vantage-tx = { path = "../vantage-tx" }
-vantage-trust = { path = "../vantage-trust" }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 tracing = "0.1"
