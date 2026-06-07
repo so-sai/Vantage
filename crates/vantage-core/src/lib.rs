@@ -34,7 +34,7 @@ pub struct CommitReceipt {
 
 /// TIA-2: Temporal epoch identifier.
 /// Policy changes, revocation snapshots, and certificate validity are epoch-relative.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct EpochId(pub u64);
 
 /// TIA-2: Logical time using Lamport clock semantics.
@@ -106,7 +106,7 @@ impl CommitResult {
 }
 
 /// PRN-1: Node identifier in distributed context.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct NodeId(pub String);
 
 /// PRN-1: A proposal for epoch transition from a participating node.
@@ -137,7 +137,7 @@ pub enum ElectionResult {
 }
 
 /// PRN-2: Placeholder signature for cross-node bundle attestation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Signature(pub Vec<u8>);
 
 /// PRN-2: A node's locally-finalized PRN-1 election result, signed for cross-node exchange.

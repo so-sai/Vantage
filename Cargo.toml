@@ -8,6 +8,7 @@ members = [
     "crates/vantage-daemon",
     "crates/vantage-prn",
     "crates/vantage-client",
+    "crates/vantage-vfp",
     "app/src-tauri"
 ]
 resolver = "2"
