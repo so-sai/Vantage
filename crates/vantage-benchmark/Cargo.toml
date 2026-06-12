@@ -7,3 +7,10 @@ description = "Benchmark harness for Vantage — measures IAR, RRF, Half-Life, a
 [dependencies]
 vantage-core = { path = "../vantage-core" }
 vantage-metrics = { path = "../vantage-metrics" }
+clap = { version = "4.5", features = ["derive"] }
+ignore = "0.4"
+
+[[bin]]
+name = "vantage-benchmark"
+path = "src/main.rs"
+

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::path::Path;
 use vantage_core::{EpochId, ResourceId};
 use vantage_metrics::{compute_iar, compute_rrf, MetricsSnapshot};
+
 
 /// A single operation in a benchmark scenario.
 #[derive(Debug, Clone)]
@@ -280,9 +282,154 @@ pub fn multi_file_edit_scenario(files: &[&str]) -> Vec<Vec<BenchmarkOp>> {
         .collect()
 }
 
+pub struct RepoScanResult {
+    pub primary_files: Vec<(ResourceId, u64)>, // (ResourceId, size_tokens)
+    pub secondary_files: Vec<(ResourceId, u64)>,
+}
+
+/// Walk the directory and gather files, categorizing them into primary and secondary, and estimating token sizes.
+pub fn scan_local_repo(repo_path: &Path) -> Result<RepoScanResult, std::io::Error> {
+    let mut primary_files = Vec::new();
+    let mut secondary_files = Vec::new();
+
+    let walker = ignore::WalkBuilder::new(repo_path)
+        .sort_by_file_path(|a, b| a.cmp(b))
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .hidden(true)
+        .follow_links(false)
+        .max_depth(Some(32))
+        .build();
+
+    for result in walker {
+        let entry = match result {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        // Get relative path as resource ID name
+        let rel_path = match path.strip_prefix(repo_path) {
+            Ok(p) => p.to_string_lossy().replace('\\', "/"),
+            Err(_) => path.to_string_lossy().replace('\\', "/"),
+        };
+
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        
+        let size_bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        let tokens = (size_bytes / 4).max(1); // crude estimation: 1 token ≈ 4 characters/bytes
+
+        let res_id = ResourceId(rel_path);
+
+        if matches!(ext, "rs" | "ts" | "tsx" | "py" | "js") {
+            primary_files.push((res_id, tokens));
+        } else if matches!(ext, "md" | "yaml" | "yml" | "toml") {
+            secondary_files.push((res_id, tokens));
+        }
+    }
+
+    Ok(RepoScanResult {
+        primary_files,
+        secondary_files,
+    })
+}
+
+/// Generate realistic scenarios based on the repository scan results.
+pub fn generate_repo_scenarios(scan: &RepoScanResult) -> Vec<(String, Vec<BenchmarkOp>)> {
+    let mut scenarios = Vec::new();
+
+    if scan.primary_files.is_empty() {
+        return scenarios;
+    }
+
+    // Scenario 1: Feature Addition
+    let mut ops1 = Vec::new();
+    let read_count = scan.primary_files.len().min(5);
+    for i in 0..read_count {
+        ops1.push(BenchmarkOp::Read {
+            resource: scan.primary_files[i].0.clone(),
+            size_tokens: scan.primary_files[i].1,
+        });
+    }
+    let edit_target = &scan.primary_files[0];
+    ops1.push(BenchmarkOp::Edit {
+        target: edit_target.0.clone(),
+        size_tokens: edit_target.1,
+    });
+    for _ in 0..3 {
+        ops1.push(BenchmarkOp::RepeatQuery {
+            query: format!("explain {}", edit_target.0.0),
+            resource: edit_target.0.clone(),
+            size_tokens: (edit_target.1 / 4).max(10),
+        });
+    }
+    scenarios.push(("Feature Addition".into(), ops1));
+
+    // Scenario 2: Bug Fix
+    let mut ops2 = Vec::new();
+    ops2.push(BenchmarkOp::Search {
+        query: "bug in authorization flow".into(),
+        size_tokens: 500,
+    });
+    let explore_count = scan.primary_files.len().min(10);
+    for i in 0..explore_count {
+        ops2.push(BenchmarkOp::Read {
+            resource: scan.primary_files[i].0.clone(),
+            size_tokens: scan.primary_files[i].1,
+        });
+    }
+    let fix_idx = if scan.primary_files.len() > 1 { 1 } else { 0 };
+    let fix_target = &scan.primary_files[fix_idx];
+    ops2.push(BenchmarkOp::Edit {
+        target: fix_target.0.clone(),
+        size_tokens: fix_target.1,
+    });
+    for _ in 0..5 {
+        ops2.push(BenchmarkOp::RepeatQuery {
+            query: format!("verify fix in {}", fix_target.0.0),
+            resource: fix_target.0.clone(),
+            size_tokens: (fix_target.1 / 4).max(10),
+        });
+    }
+    scenarios.push(("Bug Fix".into(), ops2));
+
+    // Scenario 3: Central Core Refactoring
+    let mut ops3 = Vec::new();
+    let refactor_read_count = scan.primary_files.len().min(15);
+    for i in 0..refactor_read_count {
+        ops3.push(BenchmarkOp::Read {
+            resource: scan.primary_files[i].0.clone(),
+            size_tokens: scan.primary_files[i].1,
+        });
+    }
+    let central_idx = scan.primary_files.len() - 1;
+    let central_target = &scan.primary_files[central_idx];
+    ops3.push(BenchmarkOp::Edit {
+        target: central_target.0.clone(),
+        size_tokens: central_target.1,
+    });
+    let query_count = scan.primary_files.len().min(10);
+    for i in 0..query_count {
+        ops3.push(BenchmarkOp::RepeatQuery {
+            query: format!("impact on {}", scan.primary_files[i].0.0),
+            resource: scan.primary_files[i].0.clone(),
+            size_tokens: (scan.primary_files[i].1 / 4).max(10),
+        });
+    }
+    scenarios.push(("Core Refactoring".into(), ops3));
+
+    scenarios
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
 
     #[test]
     fn test_inference_only_all_ops_cost_inference() {
@@ -404,4 +551,35 @@ mod tests {
         assert!(cmp10.iar > 0.7);
         assert!(cmp10.iar > cmp1.iar); // IAR improves with more repeats
     }
+
+    #[test]
+    fn test_local_repo_scan_finds_cargo_toml() {
+        let root = Path::new(".");
+        let scan = scan_local_repo(root).expect("Scan should succeed");
+        // We know Cargo.toml exists, which should be in secondary files.
+        let has_cargo_toml = scan.secondary_files.iter().any(|(res_id, _)| res_id.0 == "Cargo.toml");
+        assert!(has_cargo_toml, "Should have found Cargo.toml");
+        
+        // We also know lib.rs of vantage-benchmark exists, which should be in primary files.
+        let has_lib_rs = scan.primary_files.iter().any(|(res_id, _)| res_id.0.contains("lib.rs"));
+        assert!(has_lib_rs, "Should have found lib.rs");
+    }
+
+    #[test]
+    fn test_scenario_generation() {
+        let scan = RepoScanResult {
+            primary_files: vec![
+                (ResourceId("a.rs".into()), 100),
+                (ResourceId("b.rs".into()), 200),
+            ],
+            secondary_files: vec![],
+        };
+        let scenarios = generate_repo_scenarios(&scan);
+        assert_eq!(scenarios.len(), 3);
+        assert_eq!(scenarios[0].0, "Feature Addition");
+        assert_eq!(scenarios[1].0, "Bug Fix");
+        assert_eq!(scenarios[2].0, "Core Refactoring");
+    }
+
 }
+

@@ -373,7 +373,12 @@
     {
       "file": "./crates/vantage-benchmark/src/lib.rs",
       "language": "rust",
-      "nodes": 167
+      "nodes": 304
+    },
+    {
+      "file": "./crates/vantage-benchmark/src/main.rs",
+      "language": "rust",
+      "nodes": 92
     },
     {
       "file": "./crates/vantage-client/src/client.rs",
@@ -696,7 +701,7 @@
       "nodes": 6
     }
   ],
-  "total_nodes": 9805,
-  "ts": 1781267068,
+  "total_nodes": 10034,
+  "ts": 1781273618,
   "v": "1.2.5"
 }
