@@ -9,6 +9,8 @@ members = [
     "crates/vantage-prn",
     "crates/vantage-client",
     "crates/vantage-vfp",
+    "crates/vantage-metrics",
+    "crates/vantage-benchmark",
     "app/src-tauri"
 ]
 resolver = "2"

@@ -22,3 +22,7 @@ app/node_modules/
 # .kit Memory Store
 .kit/brain.db-*
 .kit/brain.db.bak
+
+# Legacy Python Kit
+legacy_kit_python/
+

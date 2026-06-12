@@ -1,522 +1,702 @@
 {
   "files": [
     {
-      "file": ".\\cli\\src\\dispatch.rs",
+      "file": "./app/src/main.ts",
+      "language": "typescript",
+      "nodes": 0
+    },
+    {
+      "file": "./app/src/vite-env.d.ts",
+      "language": "typescript",
+      "nodes": 0
+    },
+    {
+      "file": "./app/src-tauri/build.rs",
+      "language": "rust",
+      "nodes": 2
+    },
+    {
+      "file": "./app/src-tauri/src/lib.rs",
+      "language": "rust",
+      "nodes": 34
+    },
+    {
+      "file": "./app/src-tauri/src/main.rs",
+      "language": "rust",
+      "nodes": 2
+    },
+    {
+      "file": "./app/svelte.config.js",
+      "language": "javascript",
+      "nodes": 1
+    },
+    {
+      "file": "./app/vite.config.ts",
+      "language": "typescript",
+      "nodes": 0
+    },
+    {
+      "file": "./cli/src/dispatch.rs",
       "language": "rust",
       "nodes": 267
     },
     {
-      "file": ".\\cli\\src\\kit_integration.rs",
+      "file": "./cli/src/kit_integration.rs",
       "language": "rust",
       "nodes": 111
     },
     {
-      "file": ".\\cli\\src\\main.rs",
+      "file": "./cli/src/main.rs",
       "language": "rust",
       "nodes": 20
     },
     {
-      "file": ".\\cli\\src\\term.rs",
+      "file": "./cli/src/term.rs",
       "language": "rust",
       "nodes": 0
     },
     {
-      "file": ".\\core\\src\\analytics.rs",
+      "file": "./core/src/analytics.rs",
       "language": "rust",
-      "nodes": 19
+      "nodes": 20
     },
     {
-      "file": ".\\core\\src\\cognition\\claim.rs",
+      "file": "./core/src/cognition/claim.rs",
       "language": "rust",
       "nodes": 30
     },
     {
-      "file": ".\\core\\src\\cognition\\decision.rs",
+      "file": "./core/src/cognition/decision.rs",
       "language": "rust",
       "nodes": 36
     },
     {
-      "file": ".\\core\\src\\cognition\\enforcer.rs",
+      "file": "./core/src/cognition/enforcer.rs",
       "language": "rust",
       "nodes": 17
     },
     {
-      "file": ".\\core\\src\\cognition\\label.rs",
+      "file": "./core/src/cognition/label.rs",
       "language": "rust",
       "nodes": 1
     },
     {
-      "file": ".\\core\\src\\cognition\\lens.rs",
+      "file": "./core/src/cognition/lens.rs",
       "language": "rust",
       "nodes": 3
     },
     {
-      "file": ".\\core\\src\\cognition\\mod.rs",
+      "file": "./core/src/cognition/mod.rs",
       "language": "rust",
       "nodes": 7
     },
     {
-      "file": ".\\core\\src\\cognition\\pipeline.rs",
+      "file": "./core/src/cognition/pipeline.rs",
       "language": "rust",
       "nodes": 27
     },
     {
-      "file": ".\\core\\src\\cognition\\tests_rigorous.rs",
+      "file": "./core/src/cognition/tests_rigorous.rs",
       "language": "rust",
       "nodes": 191
     },
     {
-      "file": ".\\core\\src\\drift.rs",
+      "file": "./core/src/drift.rs",
       "language": "rust",
       "nodes": 43
     },
     {
-      "file": ".\\core\\src\\drift_engine\\engine.rs",
+      "file": "./core/src/drift_engine/engine.rs",
       "language": "rust",
       "nodes": 85
     },
     {
-      "file": ".\\core\\src\\drift_engine\\mod.rs",
+      "file": "./core/src/drift_engine/mod.rs",
       "language": "rust",
       "nodes": 1
     },
     {
-      "file": ".\\core\\src\\extractor\\emitter.rs",
+      "file": "./core/src/extractor/emitter.rs",
       "language": "rust",
       "nodes": 12
     },
     {
-      "file": ".\\core\\src\\extractor\\mod.rs",
+      "file": "./core/src/extractor/mod.rs",
       "language": "rust",
       "nodes": 4
     },
     {
-      "file": ".\\core\\src\\extractor\\pipeline.rs",
+      "file": "./core/src/extractor/pipeline.rs",
       "language": "rust",
       "nodes": 59
     },
     {
-      "file": ".\\core\\src\\extractor\\python.rs",
+      "file": "./core/src/extractor/python.rs",
       "language": "rust",
       "nodes": 59
     },
     {
-      "file": ".\\core\\src\\extractor\\walker.rs",
+      "file": "./core/src/extractor/walker.rs",
       "language": "rust",
       "nodes": 33
     },
     {
-      "file": ".\\core\\src\\fingerprint\\hasher.rs",
+      "file": "./core/src/fingerprint/hasher.rs",
       "language": "rust",
       "nodes": 21
     },
     {
-      "file": ".\\core\\src\\fingerprint\\mod.rs",
+      "file": "./core/src/fingerprint/mod.rs",
       "language": "rust",
       "nodes": 1
     },
     {
-      "file": ".\\core\\src\\graph.rs",
+      "file": "./core/src/graph.rs",
       "language": "rust",
-      "nodes": 100
+      "nodes": 131
     },
     {
-      "file": ".\\core\\src\\intent\\mod.rs",
+      "file": "./core/src/intent/mod.rs",
       "language": "rust",
       "nodes": 48
     },
     {
-      "file": ".\\core\\src\\intent\\validation.rs",
+      "file": "./core/src/intent/validation.rs",
       "language": "rust",
       "nodes": 138
     },
     {
-      "file": ".\\core\\src\\invariant_engine\\engine.rs",
+      "file": "./core/src/invariant_engine/engine.rs",
       "language": "rust",
       "nodes": 91
     },
     {
-      "file": ".\\core\\src\\invariant_engine\\mod.rs",
+      "file": "./core/src/invariant_engine/mod.rs",
       "language": "rust",
       "nodes": 1
     },
     {
-      "file": ".\\core\\src\\lib.rs",
+      "file": "./core/src/lib.rs",
       "language": "rust",
       "nodes": 12
     },
     {
-      "file": ".\\core\\src\\normalizer\\adapter.rs",
+      "file": "./core/src/normalizer/adapter.rs",
       "language": "rust",
       "nodes": 35
     },
     {
-      "file": ".\\core\\src\\normalizer\\mod.rs",
+      "file": "./core/src/normalizer/mod.rs",
       "language": "rust",
       "nodes": 20
     },
     {
-      "file": ".\\core\\src\\parser\\intent_extractor.rs",
+      "file": "./core/src/parser/intent_extractor.rs",
       "language": "rust",
       "nodes": 180
     },
     {
-      "file": ".\\core\\src\\parser\\mod.rs",
+      "file": "./core/src/parser/mod.rs",
       "language": "rust",
       "nodes": 688
     },
     {
-      "file": ".\\core\\src\\tirl.rs",
+      "file": "./core/src/tirl.rs",
       "language": "rust",
       "nodes": 61
     },
     {
-      "file": ".\\core\\tests\\benchmark_suite.rs",
+      "file": "./core/tests/benchmark_suite.rs",
       "language": "rust",
       "nodes": 160
     },
     {
-      "file": ".\\core\\tests\\boundary_suite.rs",
+      "file": "./core/tests/boundary_suite.rs",
       "language": "rust",
       "nodes": 206
     },
     {
-      "file": ".\\core\\tests\\cognition_fuzz.rs",
+      "file": "./core/tests/cognition_fuzz.rs",
       "language": "rust",
       "nodes": 4
     },
     {
-      "file": ".\\core\\tests\\death_suite.rs",
+      "file": "./core/tests/death_suite.rs",
       "language": "rust",
       "nodes": 80
     },
     {
-      "file": ".\\core\\tests\\death_tests.rs",
+      "file": "./core/tests/death_tests.rs",
       "language": "rust",
       "nodes": 74
     },
     {
-      "file": ".\\core\\tests\\edge_audit.rs",
+      "file": "./core/tests/edge_audit.rs",
       "language": "rust",
       "nodes": 109
     },
     {
-      "file": ".\\core\\tests\\forensic_identity.rs",
+      "file": "./core/tests/forensic_identity.rs",
       "language": "rust",
       "nodes": 97
     },
     {
-      "file": ".\\core\\tests\\forensic_invariants.rs",
+      "file": "./core/tests/forensic_invariants.rs",
       "language": "rust",
       "nodes": 55
     },
     {
-      "file": ".\\core\\tests\\forensic_registry.rs",
+      "file": "./core/tests/forensic_registry.rs",
       "language": "rust",
       "nodes": 74
     },
     {
-      "file": ".\\core\\tests\\golden_repos.rs",
+      "file": "./core/tests/golden_repos.rs",
       "language": "rust",
       "nodes": 480
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\api\\__init__.py",
+      "file": "./core/tests/repos/mixed_system/api/__init__.py",
       "language": "python",
       "nodes": 0
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\api\\server.py",
+      "file": "./core/tests/repos/mixed_system/api/server.py",
       "language": "python",
       "nodes": 2
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\backend\\src\\arena.rs",
+      "file": "./core/tests/repos/mixed_system/backend/src/arena.rs",
       "language": "rust",
       "nodes": 7
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\backend\\src\\lib.rs",
+      "file": "./core/tests/repos/mixed_system/backend/src/lib.rs",
       "language": "rust",
       "nodes": 2
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\backend\\src\\processor.rs",
+      "file": "./core/tests/repos/mixed_system/backend/src/processor.rs",
       "language": "rust",
       "nodes": 5
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\frontend\\src\\components\\ArenaPage.tsx",
+      "file": "./core/tests/repos/mixed_system/frontend/src/components/ArenaPage.tsx",
       "language": "tsx",
       "nodes": 5
     },
     {
-      "file": ".\\core\\tests\\repos\\mixed_system\\scripts\\deploy.rb",
+      "file": "./core/tests/repos/mixed_system/scripts/deploy.rb",
       "language": "ruby",
       "nodes": 6
     },
     {
-      "file": ".\\core\\tests\\repos\\python_core\\core\\__init__.py",
+      "file": "./core/tests/repos/python_core/core/__init__.py",
       "language": "python",
       "nodes": 0
     },
     {
-      "file": ".\\core\\tests\\repos\\python_core\\core\\arena.py",
+      "file": "./core/tests/repos/python_core/core/arena.py",
       "language": "python",
       "nodes": 4
     },
     {
-      "file": ".\\core\\tests\\repos\\python_core\\core\\memory.py",
+      "file": "./core/tests/repos/python_core/core/memory.py",
       "language": "python",
       "nodes": 3
     },
     {
-      "file": ".\\core\\tests\\repos\\python_core\\core\\scheduler.py",
+      "file": "./core/tests/repos/python_core/core/scheduler.py",
       "language": "python",
       "nodes": 4
     },
     {
-      "file": ".\\core\\tests\\repos\\ruby_core\\lib\\arena.rb",
+      "file": "./core/tests/repos/ruby_core/lib/arena.rb",
       "language": "ruby",
       "nodes": 4
     },
     {
-      "file": ".\\core\\tests\\repos\\ruby_core\\lib\\memory.rb",
+      "file": "./core/tests/repos/ruby_core/lib/memory.rb",
       "language": "ruby",
       "nodes": 3
     },
     {
-      "file": ".\\core\\tests\\repos\\ruby_core\\lib\\scheduler.rb",
+      "file": "./core/tests/repos/ruby_core/lib/scheduler.rb",
       "language": "ruby",
       "nodes": 4
     },
     {
-      "file": ".\\core\\tests\\repos\\rust_core\\src\\arena.rs",
+      "file": "./core/tests/repos/rust_core/src/arena.rs",
       "language": "rust",
       "nodes": 10
     },
     {
-      "file": ".\\core\\tests\\repos\\rust_core\\src\\graph.rs",
+      "file": "./core/tests/repos/rust_core/src/graph.rs",
       "language": "rust",
       "nodes": 15
     },
     {
-      "file": ".\\core\\tests\\repos\\rust_core\\src\\memory.rs",
+      "file": "./core/tests/repos/rust_core/src/memory.rs",
       "language": "rust",
       "nodes": 14
     },
     {
-      "file": ".\\core\\tests\\repos\\rust_core\\src\\scheduler.rs",
+      "file": "./core/tests/repos/rust_core/src/scheduler.rs",
       "language": "rust",
       "nodes": 16
     },
     {
-      "file": ".\\core\\tests\\repos\\tsx_frontend\\src\\components\\App.tsx",
+      "file": "./core/tests/repos/tsx_frontend/src/components/App.tsx",
       "language": "tsx",
       "nodes": 7
     },
     {
-      "file": ".\\core\\tests\\repos\\tsx_frontend\\src\\components\\ArenaView.tsx",
+      "file": "./core/tests/repos/tsx_frontend/src/components/ArenaView.tsx",
       "language": "tsx",
       "nodes": 5
     },
     {
-      "file": ".\\core\\tests\\repos\\tsx_frontend\\src\\hooks\\useArena.ts",
+      "file": "./core/tests/repos/tsx_frontend/src/hooks/useArena.ts",
       "language": "typescript",
       "nodes": 2
     },
     {
-      "file": ".\\core\\tests\\reproducibility.rs",
+      "file": "./core/tests/reproducibility.rs",
       "language": "rust",
       "nodes": 32
     },
     {
-      "file": ".\\core\\tests\\stability.rs",
+      "file": "./core/tests/stability.rs",
       "language": "rust",
       "nodes": 5
     },
     {
-      "file": ".\\examples\\python\\simple.py",
-      "language": "python",
-      "nodes": 1
+      "file": "./crates/vantage-benchmark/src/lib.rs",
+      "language": "rust",
+      "nodes": 167
     },
     {
-      "file": ".\\examples\\rust\\no_anchor.rs",
+      "file": "./crates/vantage-client/src/client.rs",
+      "language": "rust",
+      "nodes": 255
+    },
+    {
+      "file": "./crates/vantage-client/src/config.rs",
+      "language": "rust",
+      "nodes": 15
+    },
+    {
+      "file": "./crates/vantage-client/src/error.rs",
       "language": "rust",
       "nodes": 3
     },
     {
-      "file": ".\\examples\\rust\\simple.rs",
-      "language": "rust",
-      "nodes": 4
-    },
-    {
-      "file": ".\\examples\\smoke_test.py",
-      "language": "python",
-      "nodes": 0
-    },
-    {
-      "file": ".\\tests\\golden\\drift\\baseline.rs",
-      "language": "rust",
-      "nodes": 3
-    },
-    {
-      "file": ".\\tests\\golden\\drift\\current.rs",
-      "language": "rust",
-      "nodes": 3
-    },
-    {
-      "file": ".\\tests\\golden\\python_sample.py",
-      "language": "python",
-      "nodes": 4
-    },
-    {
-      "file": ".\\tests\\golden\\rust_sample.rs",
+      "file": "./crates/vantage-client/src/lib.rs",
       "language": "rust",
       "nodes": 5
     },
     {
-      "file": ".\\types\\src\\arena.rs",
+      "file": "./crates/vantage-client/src/mutation.rs",
       "language": "rust",
-      "nodes": 25
+      "nodes": 36
     },
     {
-      "file": ".\\types\\src\\caf.rs",
-      "language": "rust",
-      "nodes": 149
-    },
-    {
-      "file": ".\\types\\src\\collision.rs",
-      "language": "rust",
-      "nodes": 4
-    },
-    {
-      "file": ".\\types\\src\\dirty_propagation.rs",
-      "language": "rust",
-      "nodes": 19
-    },
-    {
-      "file": ".\\types\\src\\drift_graph.rs",
-      "language": "rust",
-      "nodes": 137
-    },
-    {
-      "file": ".\\types\\src\\edge.rs",
-      "language": "rust",
-      "nodes": 10
-    },
-    {
-      "file": ".\\types\\src\\graph.rs",
-      "language": "rust",
-      "nodes": 5
-    },
-    {
-      "file": ".\\types\\src\\hash.rs",
-      "language": "rust",
-      "nodes": 4
-    },
-    {
-      "file": ".\\types\\src\\identity_anchor.rs",
-      "language": "rust",
-      "nodes": 41
-    },
-    {
-      "file": ".\\types\\src\\incremental.rs",
-      "language": "rust",
-      "nodes": 215
-    },
-    {
-      "file": ".\\types\\src\\intent.rs",
-      "language": "rust",
-      "nodes": 4
-    },
-    {
-      "file": ".\\types\\src\\introspection.rs",
-      "language": "rust",
-      "nodes": 14
-    },
-    {
-      "file": ".\\types\\src\\introspection_registry.rs",
-      "language": "rust",
-      "nodes": 2
-    },
-    {
-      "file": ".\\types\\src\\introspection_tests.rs",
-      "language": "rust",
-      "nodes": 67
-    },
-    {
-      "file": ".\\types\\src\\invariant.rs",
-      "language": "rust",
-      "nodes": 171
-    },
-    {
-      "file": ".\\types\\src\\invariant_spec.rs",
-      "language": "rust",
-      "nodes": 5
-    },
-    {
-      "file": ".\\types\\src\\lib.rs",
-      "language": "rust",
-      "nodes": 55
-    },
-    {
-      "file": ".\\types\\src\\node_id.rs",
-      "language": "rust",
-      "nodes": 43
-    },
-    {
-      "file": ".\\types\\src\\node_stamp.rs",
-      "language": "rust",
-      "nodes": 6
-    },
-    {
-      "file": ".\\types\\src\\role_resolver.rs",
-      "language": "rust",
-      "nodes": 13
-    },
-    {
-      "file": ".\\types\\src\\semantic.rs",
-      "language": "rust",
-      "nodes": 350
-    },
-    {
-      "file": ".\\types\\src\\semantic_role.rs",
-      "language": "rust",
-      "nodes": 1
-    },
-    {
-      "file": ".\\types\\src\\signal.rs",
-      "language": "rust",
-      "nodes": 3
-    },
-    {
-      "file": ".\\types\\src\\symbol.rs",
-      "language": "rust",
-      "nodes": 1
-    },
-    {
-      "file": ".\\types\\src\\symbol_id.rs",
-      "language": "rust",
-      "nodes": 142
-    },
-    {
-      "file": ".\\types\\src\\telemetry.rs",
-      "language": "rust",
-      "nodes": 37
-    },
-    {
-      "file": ".\\types\\src\\uir.rs",
+      "file": "./crates/vantage-client/src/query.rs",
       "language": "rust",
       "nodes": 16
     },
     {
-      "file": ".\\types\\src\\version.rs",
+      "file": "./crates/vantage-core/src/lib.rs",
+      "language": "rust",
+      "nodes": 32
+    },
+    {
+      "file": "./crates/vantage-daemon/src/main.rs",
+      "language": "rust",
+      "nodes": 197
+    },
+    {
+      "file": "./crates/vantage-metrics/src/lib.rs",
+      "language": "rust",
+      "nodes": 157
+    },
+    {
+      "file": "./crates/vantage-pek/src/lib.rs",
+      "language": "rust",
+      "nodes": 253
+    },
+    {
+      "file": "./crates/vantage-pek/tests/pek_architecture_tests.rs",
+      "language": "rust",
+      "nodes": 30
+    },
+    {
+      "file": "./crates/vantage-prn/src/attractor_monitor.rs",
+      "language": "rust",
+      "nodes": 129
+    },
+    {
+      "file": "./crates/vantage-prn/src/lib.rs",
+      "language": "rust",
+      "nodes": 380
+    },
+    {
+      "file": "./crates/vantage-prn/src/trust_dynamics.rs",
+      "language": "rust",
+      "nodes": 228
+    },
+    {
+      "file": "./crates/vantage-runtime/src/lib.rs",
+      "language": "rust",
+      "nodes": 427
+    },
+    {
+      "file": "./crates/vantage-trust/src/lib.rs",
+      "language": "rust",
+      "nodes": 126
+    },
+    {
+      "file": "./crates/vantage-tx/src/lib.rs",
+      "language": "rust",
+      "nodes": 160
+    },
+    {
+      "file": "./crates/vantage-tx/tests/progressive_tx_tests.rs",
+      "language": "rust",
+      "nodes": 60
+    },
+    {
+      "file": "./crates/vantage-vfp/src/alignment.rs",
+      "language": "rust",
+      "nodes": 169
+    },
+    {
+      "file": "./crates/vantage-vfp/src/closure.rs",
+      "language": "rust",
+      "nodes": 356
+    },
+    {
+      "file": "./crates/vantage-vfp/src/divergence.rs",
+      "language": "rust",
+      "nodes": 44
+    },
+    {
+      "file": "./crates/vantage-vfp/src/lib.rs",
+      "language": "rust",
+      "nodes": 10
+    },
+    {
+      "file": "./crates/vantage-vfp/src/market.rs",
+      "language": "rust",
+      "nodes": 376
+    },
+    {
+      "file": "./crates/vantage-vfp/src/packet.rs",
+      "language": "rust",
+      "nodes": 8
+    },
+    {
+      "file": "./crates/vantage-vfp/src/predictive.rs",
+      "language": "rust",
+      "nodes": 305
+    },
+    {
+      "file": "./crates/vantage-vfp/src/stability.rs",
+      "language": "rust",
+      "nodes": 241
+    },
+    {
+      "file": "./crates/vantage-vfp/src/state.rs",
+      "language": "rust",
+      "nodes": 29
+    },
+    {
+      "file": "./crates/vantage-vfp/src/view.rs",
+      "language": "rust",
+      "nodes": 37
+    },
+    {
+      "file": "./examples/python/simple.py",
+      "language": "python",
+      "nodes": 1
+    },
+    {
+      "file": "./examples/rust/no_anchor.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "./examples/rust/simple.rs",
+      "language": "rust",
+      "nodes": 4
+    },
+    {
+      "file": "./examples/smoke_test.py",
+      "language": "python",
+      "nodes": 0
+    },
+    {
+      "file": "./tests/golden/drift/baseline.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "./tests/golden/drift/current.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "./tests/golden/python_sample.py",
+      "language": "python",
+      "nodes": 4
+    },
+    {
+      "file": "./tests/golden/rust_sample.rs",
+      "language": "rust",
+      "nodes": 5
+    },
+    {
+      "file": "./types/src/arena.rs",
+      "language": "rust",
+      "nodes": 25
+    },
+    {
+      "file": "./types/src/caf.rs",
+      "language": "rust",
+      "nodes": 149
+    },
+    {
+      "file": "./types/src/collision.rs",
+      "language": "rust",
+      "nodes": 4
+    },
+    {
+      "file": "./types/src/dirty_propagation.rs",
+      "language": "rust",
+      "nodes": 19
+    },
+    {
+      "file": "./types/src/drift_graph.rs",
+      "language": "rust",
+      "nodes": 137
+    },
+    {
+      "file": "./types/src/edge.rs",
+      "language": "rust",
+      "nodes": 10
+    },
+    {
+      "file": "./types/src/graph.rs",
+      "language": "rust",
+      "nodes": 5
+    },
+    {
+      "file": "./types/src/hash.rs",
+      "language": "rust",
+      "nodes": 4
+    },
+    {
+      "file": "./types/src/identity_anchor.rs",
+      "language": "rust",
+      "nodes": 41
+    },
+    {
+      "file": "./types/src/incremental.rs",
+      "language": "rust",
+      "nodes": 215
+    },
+    {
+      "file": "./types/src/intent.rs",
+      "language": "rust",
+      "nodes": 4
+    },
+    {
+      "file": "./types/src/introspection.rs",
+      "language": "rust",
+      "nodes": 14
+    },
+    {
+      "file": "./types/src/introspection_registry.rs",
+      "language": "rust",
+      "nodes": 2
+    },
+    {
+      "file": "./types/src/introspection_tests.rs",
+      "language": "rust",
+      "nodes": 67
+    },
+    {
+      "file": "./types/src/invariant.rs",
+      "language": "rust",
+      "nodes": 171
+    },
+    {
+      "file": "./types/src/invariant_spec.rs",
+      "language": "rust",
+      "nodes": 5
+    },
+    {
+      "file": "./types/src/lib.rs",
+      "language": "rust",
+      "nodes": 55
+    },
+    {
+      "file": "./types/src/node_id.rs",
+      "language": "rust",
+      "nodes": 43
+    },
+    {
+      "file": "./types/src/node_stamp.rs",
+      "language": "rust",
+      "nodes": 6
+    },
+    {
+      "file": "./types/src/role_resolver.rs",
+      "language": "rust",
+      "nodes": 13
+    },
+    {
+      "file": "./types/src/semantic.rs",
+      "language": "rust",
+      "nodes": 350
+    },
+    {
+      "file": "./types/src/semantic_role.rs",
+      "language": "rust",
+      "nodes": 1
+    },
+    {
+      "file": "./types/src/signal.rs",
+      "language": "rust",
+      "nodes": 3
+    },
+    {
+      "file": "./types/src/symbol.rs",
+      "language": "rust",
+      "nodes": 1
+    },
+    {
+      "file": "./types/src/symbol_id.rs",
+      "language": "rust",
+      "nodes": 142
+    },
+    {
+      "file": "./types/src/telemetry.rs",
+      "language": "rust",
+      "nodes": 37
+    },
+    {
+      "file": "./types/src/uir.rs",
+      "language": "rust",
+      "nodes": 16
+    },
+    {
+      "file": "./types/src/version.rs",
       "language": "rust",
       "nodes": 6
     }
   ],
-  "total_nodes": 5483,
-  "ts": 1778778703,
+  "total_nodes": 9805,
+  "ts": 1781267068,
   "v": "1.2.5"
 }

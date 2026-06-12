@@ -1,0 +1,17 @@
+[package]
+name = "vantage-client"
+version = "1.0.0"
+edition = "2021"
+description = "Developer-facing abstraction layer over Vantage kernel — safe mutation API for agent authors"
+
+[dependencies]
+vantage-core = { path = "../vantage-core" }
+vantage-pek = { path = "../vantage-pek" }
+vantage-tx = { path = "../vantage-tx" }
+vantage-runtime = { path = "../vantage-runtime" }
+vantage-trust = { path = "../vantage-trust" }
+vantage-prn = { path = "../vantage-prn" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
