@@ -18,7 +18,7 @@
     {
       "file": "./app/src-tauri/src/lib.rs",
       "language": "rust",
-      "nodes": 34
+      "nodes": 110
     },
     {
       "file": "./app/src-tauri/src/main.rs",
@@ -701,7 +701,7 @@
       "nodes": 6
     }
   ],
-  "total_nodes": 10034,
-  "ts": 1781273618,
+  "total_nodes": 10110,
+  "ts": 1781278225,
   "v": "1.2.5"
 }
